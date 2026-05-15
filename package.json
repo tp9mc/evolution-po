@@ -1,0 +1,14 @@
+{
+  "name": "evolution-po-tma",
+  "version": "1.0.0",
+  "description": "Evolution PO — 30-day Product Owner course as Telegram Mini App",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "preview": "npx serve . -p 3000",
+    "deploy:vercel": "vercel deploy --prod",
+    "deploy:netlify": "netlify deploy --prod --dir=."
+  },
+  "keywords": ["telegram", "mini-app", "product-owner", "course"],
+  "license": "ISC"
+}

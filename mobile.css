@@ -1,0 +1,139 @@
+/* ==================================================================
+   Mobile / iPhone adaptation for Telegram Mini App
+   Safe-area, 44pt таргеты, dvh-viewport, фикс зума на инпутах
+   ================================================================== */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+@supports (min-height: 100dvh) {
+  body { min-height: 100dvh; }
+}
+
+/* Учёт safe-area в основных контейнерах */
+.container, .wrap {
+  padding-left: max(20px, var(--safe-left)) !important;
+  padding-right: max(20px, var(--safe-right)) !important;
+  padding-bottom: max(80px, calc(var(--safe-bottom) + 60px)) !important;
+}
+
+/* Убираем тап-хайлайт и colorblock на iOS */
+a, button, label, input[type="radio"], input[type="checkbox"],
+.day, .map-day, .options label, .nav-pills a, .nav-pills button,
+.hero-btn, .btn, .phase-tab {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* В смысловых блоках текст должен выделяться */
+.scenario, .formula-box, .key-takeaway, p, textarea,
+.compare-table td, .compare-table th, .stat .v, .stat .l,
+.r-q, .o-text, .o-why, .topic, .week-theme, h1, h2, h3 {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Минимум 44pt по гайдлайну Apple для всего тапабельного */
+button, .btn, .hero-btn,
+.nav-pills a, .nav-pills button,
+.options label, .day, .map-day {
+  min-height: 44px;
+}
+
+/* iOS не зумит инпут, если font-size >= 16px */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* === Адаптация под узкие экраны iPhone === */
+@media (max-width: 480px) {
+  body { font-size: 15px; }
+  h1 { font-size: 24px !important; }
+  h2 { font-size: 17px !important; }
+  h3 { font-size: 15px !important; }
+
+  /* Хедер на главной — в столбик на узких экранах */
+  .header { flex-direction: column; align-items: flex-start; }
+  .nav-pills { width: 100%; }
+  .nav-pills a, .nav-pills button {
+    padding: 10px 12px;
+    font-size: 13px;
+    flex: 1; text-align: center;
+  }
+
+  /* Стат-карты по две в ряд */
+  .top-stats { grid-template-columns: repeat(2, 1fr) !important; }
+  .stat-card .val { font-size: 26px; }
+  .stat-card .lbl { font-size: 11px; }
+
+  /* Карта дней — 4 в ряд */
+  .days-grid, .map-days { grid-template-columns: repeat(4, 1fr) !important; }
+  .day, .map-day { aspect-ratio: 1.05; padding: 8px; }
+  .day .num, .map-day .n { font-size: 16px; }
+  .day .topic, .map-day .topic { font-size: 9.5px; line-height: 1.2; }
+
+  /* Hero более компактный */
+  .hero { padding: 20px; }
+  .hero h2 { font-size: 19px; }
+  .hero p { font-size: 13.5px; }
+  .hero-btn { padding: 12px 18px; font-size: 14px; }
+
+  /* Phase tabs внутри урока */
+  .phase-tab { padding: 8px 4px; font-size: 10.5px; }
+  .phase-tab .num { font-size: 16px; margin-bottom: 2px; }
+
+  /* Опции вопросов более тапабельные */
+  .options label { padding: 14px 14px; font-size: 14px; line-height: 1.45; }
+
+  /* Карточки с фреймворками — в один столбец */
+  .lcards { grid-template-columns: 1fr !important; }
+  .examples { grid-template-columns: 1fr !important; }
+
+  /* Сценарий и фидбек — больше воздуха */
+  .scenario, .feedback { padding: 14px 16px; font-size: 13.5px; }
+
+  /* Таймер компактнее */
+  .timer { font-size: 13px; padding: 6px 12px; }
+  .day-chip { font-size: 11px; padding: 3px 10px; }
+
+  /* Areas progress более узкая */
+  .area-row { grid-template-columns: 130px 1fr 44px !important; gap: 10px; }
+  .area-row .a-name { font-size: 12.5px; }
+
+  /* Share section в столбик на самых узких */
+  .share-section > div { grid-template-columns: 1fr !important; }
+
+  /* Carrying buttons fix */
+  button, .btn { padding: 14px 18px; font-size: 14.5px; }
+  .nav-buttons { grid-template-columns: 1fr !important; }
+}
+
+/* Очень узкие экраны (iPhone SE) */
+@media (max-width: 380px) {
+  .days-grid, .map-days { grid-template-columns: repeat(3, 1fr) !important; }
+  .day .topic, .map-day .topic { display: none; }
+  .day, .map-day { padding: 12px; }
+}
+
+/* Поддержка landscape iPhone */
+@media (max-height: 500px) and (orientation: landscape) {
+  .container, .wrap { padding-top: max(12px, var(--safe-top)) !important; }
+  .hero { padding: 16px; }
+  .top-stats { grid-template-columns: repeat(4, 1fr) !important; }
+}
+
+/* Telegram light scheme adapter — если пользователь в светлой теме TG, страница тёмная, но в курсе светлая. Внутренние страницы курса лёгкие — не трогаем. */

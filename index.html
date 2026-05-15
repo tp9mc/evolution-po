@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Evolution · 30 дней Product Owner</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f14">
+<link rel="stylesheet" href="mobile.css">
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    margin: 0; padding: 0;
+    background: linear-gradient(180deg,#0f0f14 0%,#1a1a24 100%);
+    color: #f5f5f0; min-height: 100vh; line-height: 1.55;
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end;
+            flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+  h1 { font-size: 32px; margin: 0 0 4px;
+       background: linear-gradient(135deg,#3b82f6,#a855f7,#ec4899);
+       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+       background-clip: text; }
+  .sub { color: #9ca3af; font-size: 14px; }
+  .nav-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nav-pills a, .nav-pills button {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #e5e7eb; padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    text-decoration: none; font-weight: 500; cursor: pointer; transition: all .15s;
+  }
+  .nav-pills a:hover, .nav-pills button:hover { background: rgba(255,255,255,0.12); }
+  .nav-pills .primary {
+    background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+    border-color: rgba(168,85,247,0.4); color: white; font-weight: 600;
+  }
+  .top-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+               margin-bottom: 28px; }
+  @media (max-width: 600px) { .top-stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+               padding: 18px; border-radius: 14px; }
+  .stat-card .val { font-size: 30px; font-weight: 700;
+                    background: linear-gradient(135deg,#60a5fa,#c084fc);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; line-height: 1; }
+  .stat-card .lbl { color: #9ca3af; font-size: 12px; text-transform: uppercase;
+                    letter-spacing: .06em; margin-top: 6px; }
+  .hero {
+    background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(168,85,247,0.18));
+    border: 1px solid rgba(168,85,247,0.4);
+    border-radius: 18px; padding: 26px; margin-bottom: 28px;
+  }
+  .hero h2 { margin: 0 0 6px; font-size: 22px; }
+  .hero p { margin: 0 0 14px; color: #d1d5db; font-size: 14.5px; }
+  .hero-btn { display: inline-block; background: white; color: #0f0f14;
+              padding: 12px 22px; border-radius: 12px; font-weight: 700;
+              text-decoration: none; font-size: 14.5px; }
+  .hero-btn:hover { background: #f5f5f0; }
+  .weeks { display: flex; flex-direction: column; gap: 24px; }
+  .week { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 16px; padding: 20px; }
+  .week-header { display: flex; justify-content: space-between; align-items: center;
+                 margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .week-title { font-size: 17px; font-weight: 700; }
+  .week-theme { color: #9ca3af; font-size: 13px; margin-top: 2px; }
+  .week-progress { font-size: 13px; color: #9ca3af; }
+  .week-bar { background: rgba(255,255,255,0.08); height: 6px; border-radius: 999px;
+              overflow: hidden; margin-top: 6px; min-width: 100px; }
+  .week-bar-fill { height: 100%; background: linear-gradient(90deg,#3b82f6,#a855f7); transition: width .5s; }
+  .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  @media (max-width: 600px) { .days-grid { grid-template-columns: repeat(4, 1fr); } }
+  .day {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px; cursor: pointer;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all .2s; text-decoration: none; color: inherit; position: relative;
+  }
+  .day:hover { background: rgba(255,255,255,0.09); transform: translateY(-2px); }
+  .day.current { background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+                 border-color: #a855f7; box-shadow: 0 0 0 2px rgba(168,85,247,0.3); }
+  .day.done { background: rgba(16,185,129,0.18); border-color: rgba(16,185,129,0.45); }
+  .day.review { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.38); }
+  .day.weak { box-shadow: 0 0 0 2px rgba(236,72,153,0.4); }
+  .day .num { font-size: 18px; font-weight: 700; }
+  .day .topic { font-size: 10px; line-height: 1.25; color: #d1d5db; overflow: hidden; }
+  .day .badge { position: absolute; top: 6px; right: 6px; font-size: 11px; }
+  .day.done .badge::after { content: '✓'; color: #10b981; font-weight: 700; }
+  .day.current .badge::after { content: '▶'; color: white; font-weight: 700; }
+  .day.review .num::after { content: ' 🎯'; }
+  .area-section { margin-top: 32px; background: rgba(255,255,255,0.025);
+                  border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 22px; }
+  .area-row { display: grid; grid-template-columns: 180px 1fr 50px;
+              gap: 14px; align-items: center; padding: 8px 0; }
+  .area-row .a-name { font-size: 13.5px; }
+  .area-row .a-name.weak { color: #f9a8d4; font-weight: 600; }
+  .area-row .a-bar { background: rgba(255,255,255,0.08); height: 8px;
+                     border-radius: 999px; overflow: hidden; }
+  .area-row .a-fill { height: 100%; background: linear-gradient(90deg,#3b82f6,#a855f7); }
+  .area-row .a-fill.weak { background: linear-gradient(90deg,#ec4899,#f59e0b); }
+  .area-row .a-val { font-size: 13px; text-align: right; color: #9ca3af;
+                     font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px;
+            font-size: 12px; color: #9ca3af; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-box { width: 12px; height: 12px; border-radius: 3px; }
+  .focus-note { background: rgba(236,72,153,0.1); border: 1px solid rgba(236,72,153,0.3);
+                color: #f9a8d4; padding: 12px 16px; border-radius: 10px;
+                font-size: 13px; margin-bottom: 18px; }
+  footer { margin-top: 40px; text-align: center; color: #6b7280; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div>
+      <h1>Evolution PO</h1>
+      <div class="sub">Junior → Middle за 30 дней · B2B SaaS · СДВГ-friendly · все 30 модулей открыты</div>
+    </div>
+    <div class="nav-pills">
+      <a href="course.html#home" class="primary">📚 Открыть курс</a>
+      <a href="flashcards.html">🧠 Флэш-карты</a>
+      <a href="day-0-diagnostic.html">🎯 Диагностика</a>
+      <button onclick="resetProgress()">Сбросить</button>
+    </div>
+  </div>
+
+  <div class="top-stats">
+    <div class="stat-card">
+      <div class="val" id="stat-streak">0</div>
+      <div class="lbl">🔥 Стрик</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="stat-done">0/30</div>
+      <div class="lbl">Дней пройдено</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="stat-accuracy">—</div>
+      <div class="lbl">Средняя точность</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" id="stat-diag">—</div>
+      <div class="lbl">Стартовая диагностика</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2 id="hero-title">🚀 Что делать сейчас</h2>
+    <p id="hero-text">Открой курс — все 30 модулей доступны. Урок дня подсветится как «текущий».</p>
+    <a id="hero-link" class="hero-btn" href="course.html#home">Открыть карту курса →</a>
+  </div>
+
+  <div class="focus-note" id="focus-note" style="display:none">
+    <b>📍 Подсветка по слабым зонам:</b> дни на твоих слабых темах из диагностики обведены розовым. Им — приоритет.
+  </div>
+
+  <div class="weeks" id="weeks"></div>
+
+  <div class="area-section">
+    <h3 style="margin:0 0 14px">📊 Прогресс по 7 областям PO</h3>
+    <div id="areas"></div>
+    <div style="color:#6b7280;font-size:12px;margin-top:8px" id="areas-note">Данные появятся после прохождения диагностики</div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:rgba(16,185,129,0.5)"></div>Пройден</div>
+    <div class="legend-item"><div class="legend-box" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6)"></div>Текущий</div>
+    <div class="legend-item"><div class="legend-box" style="background:rgba(245,158,11,0.4)"></div>Интегративный кейс</div>
+    <div class="legend-item"><div class="legend-box" style="background:rgba(255,255,255,0.04);box-shadow:0 0 0 2px rgba(236,72,153,0.5)"></div>Слабая зона (фокус)</div>
+  </div>
+
+  <div class="share-section" style="margin-top:40px; background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:18px; padding:24px;">
+    <h3 style="margin:0 0 6px; font-size:18px">🎁 Поделись с другом или пройди заново</h3>
+    <p style="margin:0 0 16px; color:#9ca3af; font-size:13.5px">Курс полностью бесплатный. Сброс обнулит весь прогресс — стрик, диагностику, пройденные дни.</p>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <button onclick="shareCourse()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white; border:0; padding:14px; border-radius:12px; font-size:14.5px; font-weight:600; cursor:pointer">🚀 Поделиться</button>
+      <button onclick="resetProgress()" style="background:rgba(255,255,255,0.06); color:#e5e7eb; border:1px solid rgba(255,255,255,0.15); padding:14px; border-radius:12px; font-size:14.5px; font-weight:600; cursor:pointer">🔄 Начать заново</button>
+    </div>
+    <div id="share-msg" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); border-radius:10px; color:#6ee7b7; font-size:13px; text-align:center"></div>
+  </div>
+
+  <footer>
+    Старт: 15 мая 2026 · Финиш: 14 июня 2026 · Все модули открыты — иди в любом порядке
+  </footer>
+</div>
+
+<script>
+// ===== DATA =====
+const WEEKS = [
+  { title:"Неделя 1", theme:"Фундамент роли и метрики", days:[
+    {n:1, topic:"Роль PO", area:"Роль PO"},
+    {n:2, topic:"Vision & Strategy", area:"Стратегия"},
+    {n:3, topic:"North Star Metric", area:"Метрики"},
+    {n:4, topic:"AARRR воронка", area:"Метрики"},
+    {n:5, topic:"Unit-economics", area:"Метрики"},
+    {n:6, topic:"Retention & когорты", area:"Метрики"},
+    {n:7, topic:"Кейс: метрики", area:"Метрики", review:true}
+  ]},
+  { title:"Неделя 2", theme:"Discovery и исследования", days:[
+    {n:8, topic:"Continuous Discovery", area:"Discovery"},
+    {n:9, topic:"Mom Test", area:"Discovery"},
+    {n:10, topic:"Jobs-to-be-Done", area:"Discovery"},
+    {n:11, topic:"Гипотезы", area:"Discovery"},
+    {n:12, topic:"Дешёвая валидация", area:"Discovery"},
+    {n:13, topic:"OST", area:"Discovery"},
+    {n:14, topic:"Кейс: discovery B2B", area:"Discovery", review:true}
+  ]},
+  { title:"Неделя 3", theme:"Приоритизация и бэклог", days:[
+    {n:15, topic:"User Stories", area:"Приоритизация"},
+    {n:16, topic:"RICE", area:"Приоритизация"},
+    {n:17, topic:"WSJF", area:"Приоритизация"},
+    {n:18, topic:"Kano", area:"Приоритизация"},
+    {n:19, topic:"Roadmap", area:"Приоритизация"},
+    {n:20, topic:"OKR vs KPI", area:"Приоритизация"},
+    {n:21, topic:"Кейс: бэклог 20", area:"Приоритизация", review:true}
+  ]},
+  { title:"Неделя 4", theme:"Стейкхолдеры, доставка, стратегия", days:[
+    {n:22, topic:"Stakeholder map", area:"Стейкхолдеры"},
+    {n:23, topic:"Язык C-level", area:"Стейкхолдеры"},
+    {n:24, topic:"Sales/CS/Support", area:"Стейкхолдеры"},
+    {n:25, topic:"Release strategy", area:"Доставка"},
+    {n:26, topic:"A/B в B2B", area:"Доставка"},
+    {n:27, topic:"Pricing", area:"Стратегия"},
+    {n:28, topic:"Analytics tools", area:"Метрики"}
+  ]},
+  { title:"Финал", theme:"Итоговый кейс и аттестация", days:[
+    {n:29, topic:"Финальный кейс", area:"Стратегия", review:true},
+    {n:30, topic:"Аттестация", area:"Роль PO", review:true}
+  ]}
+];
+
+const AREAS = ["Роль PO","Стратегия","Метрики","Discovery","Приоритизация","Стейкхолдеры","Доставка"];
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem('po_progress') || '{}'); }
+  catch(e) { return {}; }
+}
+function loadDiagnostic() {
+  try { return JSON.parse(localStorage.getItem('po_diagnostic_day0') || 'null'); }
+  catch(e) { return null; }
+}
+
+function render() {
+  const prog = loadProgress();
+  const diag = loadDiagnostic();
+  const done = Object.keys(prog).filter(k=>k.startsWith('day')).map(k=>parseInt(k.slice(3)));
+  const lastDay = done.length ? Math.max(...done) : 0;
+  const currentDay = lastDay + 1;
+
+  // stats
+  document.getElementById('stat-streak').textContent = prog.streak || 0;
+  document.getElementById('stat-done').textContent = `${done.length}/30`;
+  let accSum = 0, accCount = 0;
+  for (const k of Object.keys(prog)) {
+    if (k.startsWith('day') && prog[k].score !== undefined) {
+      accSum += prog[k].score; accCount++;
+    }
+  }
+  document.getElementById('stat-accuracy').textContent = accCount>0 ? Math.round(accSum/accCount*100)+'%' : '—';
+  document.getElementById('stat-diag').textContent = diag ? diag.totalPct+'%' : '—';
+
+  // weak areas
+  const weakAreas = new Set();
+  if (diag?.areaResults) {
+    for (const [area, r] of Object.entries(diag.areaResults)) {
+      if (r.correct/r.total < 0.6) weakAreas.add(area);
+    }
+  }
+
+  // hero
+  if (!diag) {
+    document.getElementById('hero-title').textContent = '🎯 Начни с диагностики';
+    document.getElementById('hero-text').innerHTML = '10 минут — и ты увидишь стартовую точку по 7 областям PO.';
+    document.getElementById('hero-link').textContent = 'Пройти диагностику →';
+    document.getElementById('hero-link').href = 'day-0-diagnostic.html';
+  } else if (done.length === 0) {
+    document.getElementById('hero-title').textContent = '🚀 Стартовая точка зафиксирована';
+    document.getElementById('hero-text').innerHTML = `Диагностика: <b>${diag.totalPct}%</b>. Открывай День 1 — Роль Product Owner.`;
+    document.getElementById('hero-link').textContent = 'День 1 →';
+    document.getElementById('hero-link').href = 'course.html#day-1';
+  } else if (currentDay <= 30) {
+    const day = WEEKS.flatMap(w=>w.days).find(d=>d.n===currentDay);
+    document.getElementById('hero-title').textContent = `📍 День ${currentDay}: ${day?.topic||'—'}`;
+    document.getElementById('hero-text').innerHTML = `Пройдено: ${done.length}/30 · Стрик: ${prog.streak||0} · 10 минут — и плюс один день к стрику.`;
+    document.getElementById('hero-link').textContent = `Открыть День ${currentDay} →`;
+    document.getElementById('hero-link').href = `course.html#day-${currentDay}`;
+  } else {
+    document.getElementById('hero-title').textContent = '🏆 Курс пройден';
+    document.getElementById('hero-text').textContent = 'Открой Day 0 ещё раз и сравни с финальной точкой.';
+    document.getElementById('hero-link').textContent = 'Финальная диагностика →';
+    document.getElementById('hero-link').href = 'day-0-diagnostic.html';
+  }
+
+  // focus note
+  if (weakAreas.size > 0) {
+    document.getElementById('focus-note').style.display = 'block';
+    document.getElementById('focus-note').innerHTML = `<b>📍 Твои слабые зоны:</b> ${Array.from(weakAreas).join(', ')}. Уроки на эти темы обведены розовым — им приоритет.`;
+  }
+
+  // weeks
+  const weeksDiv = document.getElementById('weeks');
+  weeksDiv.innerHTML = '';
+  for (const w of WEEKS) {
+    const total = w.days.length;
+    const doneInWeek = w.days.filter(d=>done.includes(d.n)).length;
+    const pct = total ? Math.round(doneInWeek/total*100) : 0;
+    const html = `
+      <div class="week">
+        <div class="week-header">
+          <div>
+            <div class="week-title">${w.title}</div>
+            <div class="week-theme">${w.theme}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="week-progress">${doneInWeek}/${total} дней</div>
+            <div class="week-bar"><div class="week-bar-fill" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+        <div class="days-grid">
+          ${w.days.map(d=>{
+            const isDone = done.includes(d.n);
+            const isCurrent = d.n === currentDay && !isDone;
+            const cls = ['day'];
+            if (isDone) cls.push('done');
+            if (isCurrent) cls.push('current');
+            if (d.review) cls.push('review');
+            if (weakAreas.has(d.area)) cls.push('weak');
+            return `<a class="${cls.join(' ')}" href="course.html#day-${d.n}">
+              <div class="badge"></div>
+              <div class="num">${d.n}</div>
+              <div class="topic">${d.topic}</div>
+            </a>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    weeksDiv.insertAdjacentHTML('beforeend', html);
+  }
+
+  // areas
+  const areasDiv = document.getElementById('areas');
+  areasDiv.innerHTML = '';
+  if (diag?.areaResults) {
+    document.getElementById('areas-note').style.display = 'none';
+    for (const a of AREAS) {
+      const r = diag.areaResults[a];
+      if (!r) continue;
+      const pct = Math.round(r.correct/r.total*100);
+      const isWeak = pct < 60;
+      areasDiv.insertAdjacentHTML('beforeend', `
+        <div class="area-row">
+          <div class="a-name ${isWeak?'weak':''}">${a}${isWeak?' 📍':''}</div>
+          <div class="a-bar"><div class="a-fill ${isWeak?'weak':''}" style="width:${pct}%"></div></div>
+          <div class="a-val">${pct}%</div>
+        </div>
+      `);
+    }
+  } else {
+    for (const a of AREAS) {
+      areasDiv.insertAdjacentHTML('beforeend', `
+        <div class="area-row">
+          <div class="a-name">${a}</div>
+          <div class="a-bar"></div>
+          <div class="a-val">—</div>
+        </div>
+      `);
+    }
+  }
+}
+
+function resetProgress() {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const confirmFn = (cb) => {
+    if (tg && tg.showConfirm) {
+      tg.showConfirm('Сбросить весь прогресс? Это обнулит стрик, пройденные дни и стартовую диагностику.', (ok) => ok && cb());
+    } else if (confirm('Сбросить весь прогресс? Это обнулит стрик, пройденные дни и стартовую диагностику.')) {
+      cb();
+    }
+  };
+  confirmFn(() => {
+    localStorage.removeItem('po_progress');
+    localStorage.removeItem('po_diagnostic_day0');
+    localStorage.removeItem('po_flashcards');
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    render();
+    const msg = document.getElementById('share-msg');
+    if (msg) {
+      msg.style.display = 'block';
+      msg.textContent = '✓ Прогресс сброшен — можно начать заново';
+      setTimeout(() => msg.style.display = 'none', 4000);
+    }
+  });
+}
+
+function shareCourse() {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const url = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+  const text = 'Бесплатный курс Product Owner — Junior → Middle за 30 дней с ADHD-friendly форматом';
+
+  if (tg?.openTelegramLink) {
+    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+  } else if (navigator.share) {
+    navigator.share({ title: 'Evolution PO', text, url }).catch(()=>{});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => {
+      const msg = document.getElementById('share-msg');
+      if (msg) {
+        msg.style.display = 'block';
+        msg.textContent = '✓ Ссылка скопирована — отправь её другу';
+        setTimeout(() => msg.style.display = 'none', 4000);
+      }
+    });
+  }
+  if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+}
+
+render();
+window.addEventListener('focus', render); // обновление при возврате с вкладки урока
+</script>
+<script src="tma-init.js"></script>
+</body>
+</html>

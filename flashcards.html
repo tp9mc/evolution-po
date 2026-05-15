@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Флэш-карты PO · Spaced Repetition</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f14">
+<link rel="stylesheet" href="mobile.css">
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    margin: 0; padding: 0;
+    background: #0f0f14; color: #f5f5f0; min-height: 100vh;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 28px 20px; }
+  .top { display: flex; justify-content: space-between; align-items: center;
+         margin-bottom: 20px; }
+  .top h1 { margin: 0; font-size: 22px; }
+  .top a { color: #9ca3af; text-decoration: none; font-size: 13px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+               margin-bottom: 22px; }
+  .stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+          padding: 12px; border-radius: 10px; text-align: center; }
+  .stat .v { font-size: 22px; font-weight: 700; color: #60a5fa; }
+  .stat .l { font-size: 10px; color: #9ca3af; letter-spacing: .06em;
+             text-transform: uppercase; margin-top: 2px; }
+
+  .card-wrap { perspective: 1200px; height: 380px; margin-bottom: 18px; }
+  .card-inner { width: 100%; height: 100%; position: relative;
+                transition: transform .5s; transform-style: preserve-3d; }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute; inset: 0; backface-visibility: hidden;
+    background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.12));
+    border: 1px solid rgba(168,85,247,0.3); border-radius: 18px;
+    padding: 28px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+  }
+  .face.back { transform: rotateY(180deg);
+               background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.12));
+               border-color: rgba(16,185,129,0.4); }
+  .area-tag { position: absolute; top: 16px; left: 16px; font-size: 11px;
+              color: #a855f7; font-weight: 600; letter-spacing: .06em;
+              text-transform: uppercase; }
+  .card-counter { position: absolute; top: 16px; right: 16px; font-size: 12px;
+                  color: #9ca3af; }
+  .face .q { font-size: 22px; font-weight: 600; line-height: 1.4;
+             padding: 0 10px; }
+  .face .a { font-size: 16px; line-height: 1.55; color: #e5e7eb;
+             padding: 0 4px; text-align: left; }
+  .face .a b { color: #6ee7b7; }
+  .flip-hint { position: absolute; bottom: 14px; font-size: 11px;
+               color: #6b7280; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .actions button { padding: 14px; border-radius: 12px; border: 0;
+                    font-size: 14px; font-weight: 600; cursor: pointer;
+                    transition: transform .1s; }
+  .actions button:active { transform: scale(0.97); }
+  .actions .again { background: #ef4444; color: white; }
+  .actions .hard { background: #f59e0b; color: white; }
+  .actions .good { background: #10b981; color: white; }
+  .flip-btn { display: block; width: 100%; padding: 14px; border-radius: 12px;
+              border: 0; background: white; color: #0f0f14; font-size: 14px;
+              font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+  .empty { text-align: center; padding: 60px 20px; color: #9ca3af; }
+  .empty h2 { color: #f5f5f0; margin-bottom: 12px; }
+  .schedule-info { background: rgba(255,255,255,0.03);
+                   border: 1px solid rgba(255,255,255,0.08); padding: 14px;
+                   border-radius: 10px; font-size: 12.5px; color: #9ca3af;
+                   margin-top: 18px; }
+  .schedule-info b { color: #f5f5f0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="top">
+    <h1>🧠 Флэш-карты · spaced repetition</h1>
+    <a href="index.html">← на главную</a>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="v" id="s-due">0</div><div class="l">К повтору</div></div>
+    <div class="stat"><div class="v" id="s-new">0</div><div class="l">Новых</div></div>
+    <div class="stat"><div class="v" id="s-learned">0</div><div class="l">Изучено</div></div>
+    <div class="stat"><div class="v" id="s-streak">0</div><div class="l">🔥 серия</div></div>
+  </div>
+
+  <div id="card-area">
+    <div class="card-wrap">
+      <div class="card-inner" id="card">
+        <div class="face front">
+          <span class="area-tag" id="area-tag">—</span>
+          <span class="card-counter" id="counter">—</span>
+          <div class="q" id="q">Загрузка...</div>
+          <div class="flip-hint">Тапни «Показать ответ» когда вспомнишь</div>
+        </div>
+        <div class="face back">
+          <span class="area-tag">Ответ</span>
+          <div class="a" id="a">—</div>
+        </div>
+      </div>
+    </div>
+    <button class="flip-btn" id="flip-btn" onclick="flip()">Показать ответ</button>
+    <div class="actions" id="actions" style="display:none">
+      <button class="again" onclick="grade(0)">Не помню<br><small style="opacity:.8">сразу</small></button>
+      <button class="hard" onclick="grade(1)">Трудно<br><small style="opacity:.8">через 2 дня</small></button>
+      <button class="good" onclick="grade(2)">Легко<br><small style="opacity:.8">через 4-8 дн</small></button>
+    </div>
+  </div>
+
+  <div id="empty" class="empty" style="display:none">
+    <h2>🎉 На сегодня всё</h2>
+    <p>Все карты, которые подошли по графику, ты повторил. Загляни снова завтра — мозг закрепляет лучше с перерывами.</p>
+    <a href="index.html" style="color:#60a5fa">← вернуться на главную</a>
+  </div>
+
+  <div class="schedule-info">
+    <b>Как работает spaced repetition:</b> «Не помню» → карта возвращается через минуту. «Трудно» → через 2 дня. «Легко» → интервал удваивается каждый раз (2 → 4 → 8 → 16 дней). За месяц ты повторишь каждую карту 4-6 раз — этого достаточно для долгосрочной памяти.
+  </div>
+
+</div>
+
+<script>
+const CARDS = [
+  // РОЛЬ PO
+  { area: "Роль PO", q: "Главная ответственность Product Owner по Scrum Guide?",
+    a: "<b>Максимизация ценности</b> продукта, создаваемого командой Scrum. Через управление Product Backlog." },
+  { area: "Роль PO", q: "Кто принимает финальное решение по приоритизации бэклога?",
+    a: "<b>Только PO</b>. Это не голосование команды и не запрос от стейкхолдеров — PO учитывает все входы, но решение единоличное." },
+  { area: "Роль PO", q: "4 шляпы Product Owner?",
+    a: "1. <b>Value Maximizer</b> (решает что делать)<br>2. <b>Backlog Steward</b> (управляет бэклогом)<br>3. <b>Bridge</b> (связь бизнес↔команда↔пользователи)<br>4. <b>Discovery Lead</b> (исследование)" },
+
+  // СТРАТЕГИЯ
+  { area: "Стратегия", q: "Чем Product Vision отличается от Product Strategy?",
+    a: "<b>Vision</b> — образ продукта через 3-5 лет (направление). <b>Strategy</b> — путь к нему: какие сегменты, какая дифференциация, как побеждаем." },
+  { area: "Стратегия", q: "Что обязательно должно быть в хорошем product vision?",
+    a: "Кто пользователь, какую проблему решаем, к какому миру стремимся. Короткий, заряжающий, не KPI." },
+
+  // МЕТРИКИ
+  { area: "Метрики", q: "Что такое North Star Metric?",
+    a: "<b>Одна</b> метрика, отражающая ценность продукта для пользователя и предсказывающая долгосрочный рост. Не выручка напрямую, а её leading indicator." },
+  { area: "Метрики", q: "Воронка AARRR — что значит каждая буква?",
+    a: "<b>Acquisition</b> (привлечение) → <b>Activation</b> (первый aha-momentary) → <b>Retention</b> (удержание) → <b>Revenue</b> (монетизация) → <b>Referral</b> (рекомендации)" },
+  { area: "Метрики", q: "Формула LTV в B2B SaaS (упрощённо)?",
+    a: "<b>LTV = ARPA × Gross Margin / Churn Rate</b><br>где ARPA — средний доход на аккаунт за период, churn — отток." },
+  { area: "Метрики", q: "Что такое CAC Payback Period и нормальное значение для B2B SaaS?",
+    a: "Период, за который ARPU окупает CAC. <b>Норма: 12-18 месяцев</b> для B2B SaaS. Меньше 12 — отлично; больше 24 — тревожно." },
+  { area: "Метрики", q: "Чем cohort retention отличается от общего retention?",
+    a: "Когортный retention считает <b>удержание группы пользователей, зашедших в один период</b>, во времени. Это показывает <i>тренд</i> качества продукта, а не среднее." },
+  { area: "Метрики", q: "В B2B SaaS retention считают на каком уровне?",
+    a: "На двух: <b>account-level</b> (продление контракта) и <b>seat-level</b> (активные пользователи внутри клиента). Они расходятся — пользователи могут уходить, контракт жить." },
+
+  // DISCOVERY
+  { area: "Discovery", q: "Главная идея Mom Test (Rob Fitzpatrick)?",
+    a: "Не спрашивай о будущем («будешь пользоваться?»). Спрашивай о <b>прошлом поведении и реальных болях</b>. Люди врут о будущем, факты прошлого — нет." },
+  { area: "Discovery", q: "Что такое Jobs-to-be-Done (JTBD)?",
+    a: "Фокус не на демографии, а на <b>«работе», которую пользователь нанимает продукт сделать</b> в конкретной ситуации с конкретным результатом. Формат: «Когда _, я хочу _, чтобы _»." },
+  { area: "Discovery", q: "Opportunity Solution Tree (Teresa Torres) — что в корне?",
+    a: "<b>Outcome</b> (желаемый бизнес-результат) → Opportunities (возможности/боли) → Solutions (идеи) → Experiments (тесты). Дерево держит фокус на цели." },
+  { area: "Discovery", q: "Что плохо в вопросе «вы бы заплатили $50 за такую фичу?»",
+    a: "1) Гипотетика — люди не отвечают деньгами на деле.<br>2) Подталкивает к нужному ответу.<br>3) Лучше: «расскажи, как ты решаешь это сейчас» + наблюдать готовность платить иначе (платный pilot)." },
+
+  // ПРИОРИТИЗАЦИЯ
+  { area: "Приоритизация", q: "Формула RICE?",
+    a: "<b>RICE = (Reach × Impact × Confidence) / Effort</b><br>Reach — сколько людей затронет. Impact — насколько (0.25/0.5/1/2/3). Confidence — уверенность %. Effort — человеко-месяцы." },
+  { area: "Приоритизация", q: "Формула WSJF (SAFe)?",
+    a: "<b>WSJF = Cost of Delay / Job Size</b><br>CoD = Business Value + Time Criticality + Risk Reduction/Opportunity Enablement. Хорошо для B2B/enterprise при time-критичности." },
+  { area: "Приоритизация", q: "Категории Kano model?",
+    a: "<b>Must-have</b> (отсутствие = недовольство), <b>Performance</b> (больше = лучше), <b>Delighters</b> (приятный сюрприз), <b>Indifferent</b> (не важно), <b>Reverse</b> (вредит)." },
+  { area: "Приоритизация", q: "Что такое INVEST в user story?",
+    a: "<b>I</b>ndependent · <b>N</b>egotiable · <b>V</b>aluable · <b>E</b>stimable · <b>S</b>mall · <b>T</b>estable" },
+
+  // СТЕЙКХОЛДЕРЫ
+  { area: "Стейкхолдеры", q: "4 квадранта Power/Interest матрицы?",
+    a: "<b>High power + high interest</b> = manage closely<br><b>High power + low interest</b> = keep satisfied<br><b>Low power + high interest</b> = keep informed<br><b>Low power + low interest</b> = monitor" },
+  { area: "Стейкхолдеры", q: "На каком языке говорить с C-level о фиче?",
+    a: "<b>Деньги и риск</b>. Не: «улучшит UX». Да: «снизит churn enterprise-клиентов на 2 п.п., что = $X ARR, при инвестиции Y инженеро-недель»." },
+
+  // ДОСТАВКА
+  { area: "Доставка", q: "Что такое feature flag и зачем он PO?",
+    a: "Переключатель в коде, позволяющий <b>включать/выключать фичу для подмножества пользователей без релиза</b>. PO может: запускать постепенно, делать A/B, быстро откатывать." },
+  { area: "Доставка", q: "Чем dark launch отличается от beta?",
+    a: "<b>Dark launch</b>: фича в production, но скрыта от всех — для тестов нагрузки и поведения системы.<br><b>Beta</b>: фича <b>видна</b> ограниченной группе, которая её сознательно тестирует." },
+  { area: "Доставка", q: "Когда A/B-тест в B2B SaaS НЕ работает?",
+    a: "При <b>малой выборке</b> (нужны тысячи на каждый вариант), при <b>длинном цикле принятия решений</b> (продажи), при <b>аккаунтном продукте</b> (выборка = аккаунт, а не пользователь). В B2B чаще: pilot + квалитативная обратная связь." },
+];
+
+// === SR State ===
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('po_flashcards') || '{}'); }
+  catch(e) { return {}; }
+}
+function saveState(s) { try { localStorage.setItem('po_flashcards', JSON.stringify(s)); } catch(e) {} }
+
+// инициализация
+let state = loadState();
+const now = Date.now();
+const DAY = 86400000;
+
+CARDS.forEach((c, i) => {
+  if (!state[i]) state[i] = { due: now, interval: 0, ef: 2.5, reps: 0, learned: false };
+});
+saveState(state);
+
+let currentIdx = null;
+
+function pickCard() {
+  const due = [];
+  const fresh = [];
+  for (let i = 0; i < CARDS.length; i++) {
+    const s = state[i];
+    if (s.due <= now) {
+      if (s.reps === 0) fresh.push(i);
+      else due.push(i);
+    }
+  }
+  // приоритет: повторы > новые
+  const pool = due.length ? due : fresh;
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function render() {
+  // stats
+  let due = 0, learned = 0, fresh = 0;
+  for (let i = 0; i < CARDS.length; i++) {
+    const s = state[i];
+    if (s.learned) learned++;
+    if (s.due <= now) {
+      if (s.reps === 0) fresh++;
+      else due++;
+    }
+  }
+  document.getElementById('s-due').textContent = due;
+  document.getElementById('s-new').textContent = fresh;
+  document.getElementById('s-learned').textContent = learned;
+  document.getElementById('s-streak').textContent = state._streak || 0;
+
+  const idx = pickCard();
+  if (idx === null) {
+    document.getElementById('card-area').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+  currentIdx = idx;
+  const c = CARDS[idx];
+  document.getElementById('area-tag').textContent = c.area;
+  document.getElementById('counter').textContent = `${idx+1} / ${CARDS.length}`;
+  document.getElementById('q').textContent = c.q;
+  document.getElementById('a').innerHTML = c.a;
+  document.getElementById('card').classList.remove('flipped');
+  document.getElementById('flip-btn').style.display = 'block';
+  document.getElementById('actions').style.display = 'none';
+}
+
+function flip() {
+  document.getElementById('card').classList.add('flipped');
+  document.getElementById('flip-btn').style.display = 'none';
+  document.getElementById('actions').style.display = 'grid';
+}
+
+function grade(g) {
+  const s = state[currentIdx];
+  s.reps++;
+  if (g === 0) { // again
+    s.interval = 0;
+    s.due = now + 60000; // через минуту
+    state._streak = 0;
+  } else if (g === 1) { // hard
+    s.interval = Math.max(2, Math.floor(s.interval * 1.2));
+    s.due = now + s.interval * DAY;
+    s.learned = true;
+    state._streak = (state._streak || 0) + 1;
+  } else { // good
+    s.interval = s.interval === 0 ? 4 : Math.floor(s.interval * 2);
+    s.due = now + s.interval * DAY;
+    s.learned = true;
+    state._streak = (state._streak || 0) + 1;
+  }
+  saveState(state);
+  render();
+}
+
+render();
+</script>
+<script src="tma-init.js"></script>
+</body>
+</html>
