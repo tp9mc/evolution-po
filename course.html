@@ -1480,7 +1480,7 @@ function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
 function $(id){return document.getElementById(id);}
 function loadProg(){try{return JSON.parse(localStorage.getItem('po_progress')||'{}');}catch(e){return {};}}
-function saveProg(p){try{localStorage.setItem('po_progress',JSON.stringify(p));}catch(e){}}
+function saveProg(p){var j=JSON.stringify(p);try{localStorage.setItem('po_progress',j);}catch(e){}if(window.POCloud)POCloud.mirror('po_progress',j);}
 function loadDiag(){try{return JSON.parse(localStorage.getItem('po_diagnostic_day0')||'null');}catch(e){return null;}}
 
 const WEEKS = [
@@ -1506,6 +1506,7 @@ function renderHome(){
       <h1>Evolution PO · карта курса</h1>
       <div style="display:flex;gap:8px">
         <a href="flashcards.html">🧠 Флэш-карты</a>
+        <a href="achievements.html">🛡️ Гербы</a>
         <a href="index.html">🏠 Стартовая</a>
       </div>
     </div>

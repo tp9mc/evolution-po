@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Гербы знаний · Evolution PO</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="cloud-sync.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f14">
+<link rel="stylesheet" href="mobile.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #0f0f14; color: #e8e8ea;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    padding: 20px 16px 48px; max-width: 720px; margin: 0 auto; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .top a { color: #9ca3af; text-decoration: none; font-size: 14px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-top: 8px; }
+  .sub { color: #9ca3af; font-size: 13.5px; margin: 8px 0 22px; line-height: 1.5; }
+  .summary { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+  .chip { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 12px; padding: 10px 14px; font-size: 12.5px; color: #cbd5e1; }
+  .chip b { color: #fff; font-size: 15px; }
+  .sec-title { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+    color: #6b7280; margin: 26px 0 14px; font-weight: 700; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px; }
+  .crest { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px; padding: 16px 12px 14px; text-align: center; position: relative;
+    transition: transform .15s, border-color .15s; }
+  .crest.unlocked { border-color: rgba(255,255,255,0.14); }
+  .crest:active { transform: scale(.97); }
+  .crest svg { width: 96px; height: 118px; display: block; margin: 0 auto 10px; }
+  .crest .nm { font-size: 14px; font-weight: 700; color: #f3f4f6; line-height: 1.25; }
+  .crest .tier { font-size: 11.5px; margin-top: 5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; }
+  .crest .hint { font-size: 11px; color: #6b7280; margin-top: 7px; line-height: 1.35; min-height: 28px; }
+  .crest.locked .nm { color: #6b7280; }
+  .t-locked { color: #6b7280; } .t-bronze { color: #d99a5b; }
+  .t-silver { color: #cdd6df; } .t-gold { color: #ffd86b; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 16px; }
+  .badge { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px; padding: 18px 14px; text-align: center; }
+  .badge.on { border-color: rgba(255,216,107,0.4); background: rgba(255,216,107,0.06); }
+  .badge .ic { font-size: 38px; line-height: 1; filter: grayscale(1) opacity(.4); }
+  .badge.on .ic { filter: none; }
+  .badge .bn { font-size: 13.5px; font-weight: 700; margin-top: 9px; color: #e5e7eb; }
+  .badge .bd { font-size: 11px; color: #6b7280; margin-top: 5px; line-height: 1.35; }
+  .empty { color: #6b7280; font-size: 13px; text-align: center; padding: 30px 0; }
+  .footer-note { color: #4b5563; font-size: 11.5px; margin-top: 28px; text-align: center; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="top"><a href="index.html">‹ На главную</a></div>
+  <h1>🛡️ Гербы знаний</h1>
+  <p class="sub">За каждой из 7 областей Product Owner закреплён герб. Он растёт в металле — <span class="t-bronze">бронза</span> → <span class="t-silver">серебро</span> → <span class="t-gold">золото</span> — по мере того как ты проходишь дни этой области и подтверждаешь знание в диагностике и квизах. Однажды добытый металл не тускнеет.</p>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="sec-title">Гербы областей</div>
+  <div class="grid" id="crests"></div>
+
+  <div class="sec-title">Знаки отличия</div>
+  <div class="meta-grid" id="badges"></div>
+
+  <p class="footer-note" id="fnote"></p>
+
+<script>
+// ===== Данные областей: какие дни курса относятся к области + герб =====
+var AREAS = [
+  { key:'Роль PO',        emoji:'🎭', color:'#6366f1', days:[1,30] },
+  { key:'Стратегия',      emoji:'🧭', color:'#14b8a6', days:[2,27,29] },
+  { key:'Метрики',        emoji:'📊', color:'#f59e0b', days:[3,4,5,6,7,28] },
+  { key:'Discovery',      emoji:'🔍', color:'#0ea5e9', days:[8,9,10,11,12,13,14] },
+  { key:'Приоритизация',  emoji:'🪜', color:'#8b5cf6', days:[15,16,17,18,19,20,21] },
+  { key:'Стейкхолдеры',   emoji:'🤝', color:'#f43f5e', days:[22,23,24] },
+  { key:'Доставка',       emoji:'🚀', color:'#10b981', days:[25,26] }
+];
+var TIER_NAME = ['Не открыт','Бронза','Серебро','Золото'];
+var TIER_CLASS = ['t-locked','t-bronze','t-silver','t-gold'];
+
+// ===== Чистая функция расчёта (тестируется отдельно) =====
+function computeCrests(prog, diag) {
+  prog = prog || {};
+  var diagAreas = (diag && diag.areaResults) || null;
+  var out = [];
+  AREAS.forEach(function (a) {
+    var total = a.days.length;
+    var done = a.days.filter(function (d) { return prog['day' + d]; });
+    var scored = done.map(function (d) { return prog['day' + d].score; })
+                     .filter(function (s) { return typeof s === 'number'; });
+    var signals = [];
+    var coverage = total ? (done.length / total) * 100 : 0;
+    if (done.length > 0) signals.push(coverage);
+    if (scored.length > 0)
+      signals.push((scored.reduce(function (s, v) { return s + v; }, 0) / scored.length) * 100);
+    var dr = diagAreas && diagAreas[a.key];
+    if (dr && dr.total) signals.push((dr.correct / dr.total) * 100);
+    var mastery = signals.length
+      ? Math.round(signals.reduce(function (s, v) { return s + v; }, 0) / signals.length) : 0;
+    var engaged = (done.length > 0) || !!dr;
+    var tier;
+    if (!engaged) tier = 0;
+    else if (mastery >= 80 && done.length === total) tier = 3;
+    else if (mastery >= 55 || done.length === total) tier = 2;
+    else tier = 1;
+    out.push({ key: a.key, emoji: a.emoji, color: a.color,
+      total: total, done: done.length, mastery: mastery, tier: tier });
+  });
+  return out;
+}
+
+// ===== persist: однажды добытый металл не тускнеет =====
+function loadAch() { try { return JSON.parse(localStorage.getItem('po_achievements') || '{}'); } catch (e) { return {}; } }
+function saveAch(a) {
+  var j = JSON.stringify(a);
+  try { localStorage.setItem('po_achievements', j); } catch (e) {}
+  if (window.POCloud) POCloud.mirror('po_achievements', j);
+}
+
+// ===== SVG-герб =====
+function crestSVG(area, tier, uid) {
+  var metals = {
+    0: ['#3a3a44', '#23232b'],
+    1: ['#d99a5b', '#8c5a2b'],
+    2: ['#e8eef3', '#8a97a3'],
+    3: ['#ffe082', '#b8860b']
+  };
+  var m = metals[tier];
+  var locked = tier === 0;
+  var gid = 'g' + uid, fid = 'f' + uid;
+  var shield = 'M60 6 L114 24 V76 C114 114 92 137 60 146 C28 137 6 114 6 76 V24 Z';
+  return '' +
+  '<svg viewBox="0 0 120 152" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    '<defs>' +
+      '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="' + m[0] + '"/>' +
+        '<stop offset="1" stop-color="' + m[1] + '"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="' + fid + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="' + (locked ? '#1c1c22' : area.color) + '" stop-opacity="' + (locked ? '0.6' : '0.95') + '"/>' +
+        '<stop offset="1" stop-color="#0f0f14" stop-opacity="0.9"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    '<path d="' + shield + '" fill="url(#' + gid + ')"/>' +
+    '<path d="' + shield + '" fill="url(#' + fid + ')" transform="translate(60 76) scale(0.82) translate(-60 -76)"/>' +
+    '<text x="60" y="86" text-anchor="middle" font-size="42"' +
+      (locked ? ' opacity="0.35"' : '') + '>' + area.emoji + '</text>' +
+    (locked
+      ? '<text x="60" y="125" text-anchor="middle" font-size="20" opacity="0.5">🔒</text>'
+      : '<g>' + stars(tier) + '</g>') +
+  '</svg>';
+}
+function stars(tier) {
+  var s = '', n = tier, cx = 60, gap = 16, y = 122;
+  var startX = cx - gap * (n - 1) / 2;
+  for (var i = 0; i < n; i++)
+    s += '<text x="' + (startX + i * gap) + '" y="' + y + '" text-anchor="middle" font-size="15">★</text>';
+  return s;
+}
+
+// ===== hint под гербом =====
+function crestHint(c) {
+  if (c.tier === 0) return 'Пройди день этой области или диагностику, чтобы открыть герб.';
+  var parts = [];
+  parts.push('Дни: ' + c.done + '/' + c.total);
+  parts.push('Освоение ~' + c.mastery + '%');
+  if (c.tier < 3) {
+    parts.push(c.tier === 2
+      ? 'До золота: 80%+ и все дни области'
+      : 'До серебра: 55%+ или все дни области');
+  } else {
+    parts.push('Максимум — мастерство области');
+  }
+  return parts.join(' · ');
+}
+
+// ===== render =====
+function render() {
+  var prog = {}; try { prog = JSON.parse(localStorage.getItem('po_progress') || '{}'); } catch (e) {}
+  var diag = null; try { diag = JSON.parse(localStorage.getItem('po_diagnostic_day0') || 'null'); } catch (e) {}
+
+  var current = computeCrests(prog, diag);
+
+  // не тускнеет: отображаемый металл = max(текущий, ранее добытый)
+  var ach = loadAch();
+  ach.areas = ach.areas || {};
+  var now = new Date().toISOString();
+  var display = current.map(function (c) {
+    var prev = ach.areas[c.key];
+    var prevTier = prev ? prev.tier : 0;
+    var shownTier = Math.max(c.tier, prevTier);
+    if (shownTier > prevTier) ach.areas[c.key] = { tier: shownTier, since: now };
+    else if (!prev && shownTier === 0) ach.areas[c.key] = { tier: 0, since: null };
+    return Object.assign({}, c, { shownTier: shownTier });
+  });
+
+  var unlocked = display.filter(function (c) { return c.shownTier >= 1; }).length;
+  var golds = display.filter(function (c) { return c.shownTier === 3; }).length;
+  var allDays = 0; for (var i = 1; i <= 30; i++) if (prog['day' + i]) allDays++;
+
+  document.getElementById('summary').innerHTML =
+    '<div class="chip"><b>' + unlocked + '</b> / 7 гербов открыто</div>' +
+    '<div class="chip"><b>' + golds + '</b> золотых</div>' +
+    '<div class="chip"><b>' + allDays + '</b> / 30 дней пройдено</div>';
+
+  var grid = document.getElementById('crests');
+  grid.innerHTML = display.map(function (c, idx) {
+    var cls = 'crest ' + (c.shownTier >= 1 ? 'unlocked' : 'locked');
+    return '<div class="' + cls + '">' +
+      crestSVG(c, c.shownTier, idx) +
+      '<div class="nm">' + c.key + '</div>' +
+      '<div class="tier ' + TIER_CLASS[c.shownTier] + '">' + TIER_NAME[c.shownTier] + '</div>' +
+      '<div class="hint">' + crestHint(c) + '</div>' +
+    '</div>';
+  }).join('');
+
+  // ===== знаки отличия (мета) =====
+  var anyBronze = display.some(function (c) { return c.shownTier >= 1; });
+  var allSilver = display.every(function (c) { return c.shownTier >= 2; });
+  var allGold = display.every(function (c) { return c.shownTier === 3; });
+  var discipline = allDays === 30;
+  var BADGES = [
+    { on: anyBronze,  ic: '🥉', nm: 'Первый герб',      bd: 'Открыт хотя бы один герб области' },
+    { on: allSilver,  ic: '🏅', nm: 'Магистр продукта', bd: 'Все 7 областей — серебро и выше' },
+    { on: allGold,    ic: '👑', nm: 'Великий магистр',  bd: 'Все 7 гербов — золото' },
+    { on: discipline, ic: '🔥', nm: 'Дисциплина',        bd: 'Пройдены все 30 дней курса' }
+  ];
+  document.getElementById('badges').innerHTML = BADGES.map(function (b) {
+    return '<div class="badge ' + (b.on ? 'on' : '') + '">' +
+      '<div class="ic">' + b.ic + '</div>' +
+      '<div class="bn">' + b.nm + '</div>' +
+      '<div class="bd">' + b.bd + '</div>' +
+    '</div>';
+  }).join('');
+
+  ach.meta = { firstCrest: anyBronze, master: allSilver, grandmaster: allGold, discipline: discipline };
+  saveAch(ach);
+
+  document.getElementById('fnote').textContent =
+    'Гербы считаются из пройденных дней, баллов квизов и стартовой диагностики. ' +
+    'Хочешь поднять металл — проходи дни области и пересдавай диагностику.';
+}
+
+window.__computeCrests = computeCrests; // для авто-тестов
+render();
+</script>
+<script src="tma-init.js"></script>
+</body>
+</html>

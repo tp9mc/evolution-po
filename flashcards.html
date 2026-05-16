@@ -197,7 +197,7 @@ function loadState() {
   try { return JSON.parse(localStorage.getItem('po_flashcards') || '{}'); }
   catch(e) { return {}; }
 }
-function saveState(s) { try { localStorage.setItem('po_flashcards', JSON.stringify(s)); } catch(e) {} }
+function saveState(s) { var j = JSON.stringify(s); try { localStorage.setItem('po_flashcards', j); } catch(e) {} if (window.POCloud) POCloud.mirror('po_flashcards', j); }
 
 // инициализация
 let state = loadState();

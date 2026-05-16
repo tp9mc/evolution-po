@@ -126,6 +126,7 @@
       <a href="course.html#home" class="primary">📚 Открыть курс</a>
       <a href="flashcards.html">🧠 Флэш-карты</a>
       <a href="day-0-diagnostic.html">🎯 Диагностика</a>
+      <a href="achievements.html">🛡️ Гербы знаний</a>
       <button onclick="resetProgress()">Сбросить</button>
     </div>
   </div>
@@ -386,6 +387,8 @@ function resetProgress() {
     localStorage.removeItem('po_progress');
     localStorage.removeItem('po_diagnostic_day0');
     localStorage.removeItem('po_flashcards');
+    localStorage.removeItem('po_achievements');
+    if (window.POCloud) { POCloud.drop('po_progress'); POCloud.drop('po_diagnostic_day0'); POCloud.drop('po_flashcards'); POCloud.drop('po_achievements'); }
     if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     render();
     const msg = document.getElementById('share-msg');

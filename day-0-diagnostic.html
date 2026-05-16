@@ -672,7 +672,9 @@ function finish() {
 
   // save
   const result = { date: new Date().toISOString(), totalPct, areaResults };
-  try { localStorage.setItem('po_diagnostic_day0', JSON.stringify(result)); } catch(e) {}
+  const _diagJson = JSON.stringify(result);
+  try { localStorage.setItem('po_diagnostic_day0', _diagJson); } catch(e) {}
+  if (window.POCloud) POCloud.mirror('po_diagnostic_day0', _diagJson);
 
   document.getElementById('quiz').style.display = 'none';
   submitBtn.style.display = 'none';

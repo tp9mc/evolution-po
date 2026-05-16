@@ -1,37 +1,45 @@
 // ===================================================================
-// Durable progress layer for Evolution PO.
+// Durable progress layer for Evolution PO  ·  window.POCloud
 //
-// Проблема, которую решает: чистый localStorage в Telegram Web App
-// нестабилен — теряется при смене домена, переустановке, а у
-// мини-аппов из бота webview-хранилище бывает неперсистентным.
+// Зачем: чистый localStorage в Telegram Web App нестабилен — теряется
+// при смене домена, переустановке, неперсистентном webview мини-аппа.
+// Решение: Telegram.WebApp.CloudStorage (привязан к аккаунту, на
+// сервере Telegram) как durable-зеркало localStorage.
 //
-// Решение: Telegram.WebApp.CloudStorage (привязан к аккаунту, живёт
-// на сервере Telegram) как durable-зеркало. localStorage остаётся
-// рабочим синхронным стором (код приложения не меняется) — этот
-// модуль прозрачно зеркалит запись в облако и при пустом локальном
-// сторе восстанавливает данные из облака.
+// ВАЖНО: Storage-объект НЕЛЬЗЯ безопасно monkeypatch-ить
+// (localStorage.setItem = fn у Storage просто создаёт ключ "setItem";
+// патч прототипа ломается brand-проверкой this в части движков).
+// Поэтому НЕ патчим Storage, а даём явный API:
+//   window.POCloud.mirror(key, value)  — продублировать в облако
+//   window.POCloud.drop(key)           — удалить из облака
+// Места записи прогресса в приложении вызывают mirror/drop явно.
+// Гидратация (облако -> localStorage при пустом локальном сторе)
+// делается тут на загрузке, без всякого патчинга.
 //
 // Подключается в <head> сразу после telegram-web-app.js, ДО кода
-// приложения, чтобы обёртка стояла раньше любых loadProg().
+// приложения (чтобы гидратация успела до первых loadProg()).
 // ===================================================================
 (function () {
-  var KEYS = ['po_progress', 'po_diagnostic_day0', 'po_flashcards'];
+  var KEYS = ['po_progress', 'po_diagnostic_day0', 'po_flashcards', 'po_achievements'];
   var CS_LIMIT = 4096; // лимит значения Telegram CloudStorage
   var tg = window.Telegram && window.Telegram.WebApp;
   var cs = tg && tg.CloudStorage;
   var canCloud = !!cs &&
     typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('6.9');
+  var LS = window.localStorage;
 
   function isEmptyVal(v) {
-    return v === null || v === '' || v === '{}' || v === 'null';
+    return v === null || v === undefined || v === '' ||
+           v === '{}' || v === 'null';
   }
 
-  // po_progress с рефлексиями может превысить лимит CloudStorage.
-  // Тогда в облако кладём компактную проекцию (без текста reflection):
-  // факт прохождения дня + score сохраняются, личные заметки —
-  // только локально. Так важная часть прогресса всегда durable.
+  // po_progress с рефлексиями может превысить лимит CloudStorage —
+  // тогда в облако кладём компактную проекцию (без текста reflection):
+  // факт прохождения дня + score сохраняются, заметки — только локально.
   function cloudValue(key, val) {
-    if (val == null || val.length <= CS_LIMIT) return val;
+    if (val == null) return null;
+    val = String(val);
+    if (val.length <= CS_LIMIT) return val;
     if (key === 'po_progress') {
       try {
         var p = JSON.parse(val), out = {};
@@ -43,40 +51,32 @@
         return c.length <= CS_LIMIT ? c : null;
       } catch (e) { return null; }
     }
-    return null; // слишком большое и не сжать — пропускаем облако
+    return null;
   }
 
-  function pushCloud(key, val) {
-    if (!canCloud) return;
-    var cv = cloudValue(key, val);
-    if (cv == null) return;
-    try { cs.setItem(key, cv, function () {}); } catch (e) {}
-  }
+  // --- публичный API ---
+  var POCloud = {
+    available: canCloud,
+    mirror: function (key, val) {
+      if (!canCloud || KEYS.indexOf(key) === -1) return;
+      var cv = cloudValue(key, val);
+      if (cv == null) return;
+      try { cs.setItem(key, cv, function () {}); } catch (e) {}
+    },
+    drop: function (key) {
+      if (!canCloud || KEYS.indexOf(key) === -1) return;
+      try { cs.removeItem(key, function () {}); } catch (e) {}
+    }
+  };
+  window.POCloud = POCloud;
 
-  // --- 1. write-through: оборачиваем localStorage ---
-  var _set = window.localStorage.setItem.bind(window.localStorage);
-  var _rem = window.localStorage.removeItem.bind(window.localStorage);
-  try {
-    window.localStorage.setItem = function (k, v) {
-      _set(k, v);
-      if (KEYS.indexOf(k) >= 0) pushCloud(k, String(v));
-    };
-    window.localStorage.removeItem = function (k) {
-      _rem(k);
-      if (KEYS.indexOf(k) >= 0 && canCloud) {
-        try { cs.removeItem(k, function () {}); } catch (e) {}
-      }
-    };
-  } catch (e) { /* среды, где Storage не патчится — деградируем тихо */ }
-
-  // --- 2. one-time seed через URL (?po_seed=days:1-7 или days:1,2,5) ---
-  // Восстановление прохождения без выдуманных баллов: дни помечаются
-  // пройденными (seeded:true), score НЕ ставим — точность не врёт.
+  // --- one-time seed через URL (?po_seed=days:1-7 или days:1,2,5) ---
+  // Восстановление без выдуманных баллов: дни помечаются пройденными
+  // (seeded:true), score НЕ ставим — точность остаётся честной.
   function applySeed() {
     var m = /[?&]po_seed=([^&]+)/.exec(window.location.search);
     if (!m) return false;
-    var spec = decodeURIComponent(m[1]);
-    var days = [];
+    var spec = decodeURIComponent(m[1]), days = [];
     spec.split(';').forEach(function (part) {
       var mm = /days:(.+)/.exec(part.trim());
       if (!mm) return;
@@ -89,39 +89,37 @@
     });
     if (!days.length) return false;
     var prog = {};
-    try { prog = JSON.parse(window.localStorage.getItem('po_progress') || '{}'); } catch (e) {}
+    try { prog = JSON.parse(LS.getItem('po_progress') || '{}'); } catch (e) {}
     var now = new Date().toISOString();
     days.forEach(function (d) {
       if (!prog['day' + d]) prog['day' + d] = { date: now, seeded: true };
     });
-    window.localStorage.setItem('po_progress', JSON.stringify(prog)); // -> и в облако
-    // убрать параметр из URL и перезагрузить чисто
-    var clean = window.location.pathname + window.location.hash;
-    window.location.replace(clean);
+    var json = JSON.stringify(prog);
+    try { LS.setItem('po_progress', json); } catch (e) {}
+    POCloud.mirror('po_progress', json);
+    window.location.replace(window.location.pathname + window.location.hash);
     return true;
   }
   if (applySeed()) return;
 
-  // --- 3. hydrate: облако -> локально для пустых ключей ---
+  // --- hydrate: облако -> localStorage для пустых ключей ---
   if (canCloud) {
     try {
       cs.getItems(KEYS, function (err, data) {
         if (err || !data) return;
         var restored = false;
         KEYS.forEach(function (k) {
-          var cloudVal = data[k];
-          var localVal = window.localStorage.getItem(k);
-          if (cloudVal && !isEmptyVal(cloudVal) && isEmptyVal(localVal)) {
-            _set(k, cloudVal);            // тихо, без обратной записи в облако
-            restored = true;
-          } else if (localVal && !isEmptyVal(localVal) &&
-                     (cloudVal === undefined || isEmptyVal(cloudVal))) {
-            pushCloud(k, localVal);        // локально есть, в облаке нет — поднять
+          var cloudVal = data[k], localVal = null;
+          try { localVal = LS.getItem(k); } catch (e) {}
+          if (!isEmptyVal(cloudVal) && isEmptyVal(localVal)) {
+            try { LS.setItem(k, cloudVal); restored = true; } catch (e) {}
+          } else if (!isEmptyVal(localVal) && isEmptyVal(cloudVal)) {
+            POCloud.mirror(k, localVal);      // локально есть, в облаке нет
           }
         });
         if (restored && !sessionStorage.getItem('po_cloud_hydrated')) {
           sessionStorage.setItem('po_cloud_hydrated', '1');
-          window.location.reload();        // дать синхронному коду увидеть данные
+          window.location.reload();           // дать синхронному коду данные
         }
       });
     } catch (e) { /* CloudStorage недоступен — работаем на localStorage */ }
