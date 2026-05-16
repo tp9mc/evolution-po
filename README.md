@@ -86,7 +86,7 @@ ngrok http 3000
 ## Хранение прогресса
 
 Используется `localStorage` браузера Telegram WebApp:
-- `po_progress` — пройденные дни, стрик, точность ответов
+- `po_progress` — пройденные дни, страйк, точность ответов
 - `po_diagnostic_day0` — результаты стартовой диагностики
 - `po_flashcards` — состояние spaced repetition
 

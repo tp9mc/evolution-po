@@ -1511,7 +1511,7 @@ function renderHome(){
     <div class="stats">
       <div class="stat"><div class="v">${done.length}/30</div><div class="l">Пройдено</div></div>
       <div class="stat"><div class="v">${accScore>0?Math.round(accScore*100)+'%':'—'}</div><div class="l">Точность</div></div>
-      <div class="stat"><div class="v">🔥${prog.streak||0}</div><div class="l">Стрик</div></div>
+      <div class="stat"><div class="v">🔥${prog.streak||0}</div><div class="l">Страйк</div></div>
     </div>
   `;
 
@@ -1612,7 +1612,7 @@ function renderLesson(day){
         <div class="stats">
           <div class="stat"><div class="v" id="stat-score">—</div><div class="l">Точность</div></div>
           <div class="stat"><div class="v">${lesson.d}/30</div><div class="l">Дней</div></div>
-          <div class="stat"><div class="v">🔥<span id="stat-streak">—</span></div><div class="l">Стрик</div></div>
+          <div class="stat"><div class="v">🔥<span id="stat-streak">—</span></div><div class="l">Страйк</div></div>
         </div>
         <div class="nav-buttons">
           <a href="#home" class="btn btn-secondary" style="color:#1a1a1a">← карта</a>
