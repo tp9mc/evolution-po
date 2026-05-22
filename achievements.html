@@ -81,10 +81,18 @@ var AREAS = [
 var TIER_NAME = ['Не открыт','Бронза','Серебро','Золото'];
 var TIER_CLASS = ['t-locked','t-bronze','t-silver','t-gold'];
 
+// Полный размер банка метрик. Держать синхронным с METRICS.length в metrics.html.
+var METRICS_TOTAL = 88;
+
 // ===== Чистая функция расчёта (тестируется отдельно) =====
-function computeCrests(prog, diag) {
+// prog: po_progress; diag: po_diagnostic_day0; metrics: {mastered, total} — опц.
+// Для области «Метрики» добавляем сигнал освоения банка метрик
+// (mastered/total*100). Освоённой считаем метрику с reps>=2.
+function computeCrests(prog, diag, metrics) {
   prog = prog || {};
   var diagAreas = (diag && diag.areaResults) || null;
+  var mTotal = (metrics && metrics.total) || METRICS_TOTAL;
+  var mMastered = (metrics && metrics.mastered) || 0;
   var out = [];
   AREAS.forEach(function (a) {
     var total = a.days.length;
@@ -98,9 +106,15 @@ function computeCrests(prog, diag) {
       signals.push((scored.reduce(function (s, v) { return s + v; }, 0) / scored.length) * 100);
     var dr = diagAreas && diagAreas[a.key];
     if (dr && dr.total) signals.push((dr.correct / dr.total) * 100);
+    var metricsBoost = 0;
+    if (a.key === 'Метрики' && mMastered > 0) {
+      metricsBoost = Math.min(100, (mMastered / mTotal) * 100);
+      signals.push(metricsBoost);
+    }
     var mastery = signals.length
       ? Math.round(signals.reduce(function (s, v) { return s + v; }, 0) / signals.length) : 0;
-    var engaged = (done.length > 0) || !!dr;
+    var engaged = (done.length > 0) || !!dr ||
+      (a.key === 'Метрики' && mMastered > 0);
     var tier;
     if (!engaged) tier = 0;
     else if (mastery >= 80 && done.length === total) tier = 3;
@@ -110,6 +124,18 @@ function computeCrests(prog, diag) {
       total: total, done: done.length, mastery: mastery, tier: tier });
   });
   return out;
+}
+
+// Подсчёт состояния банка метрик из po_metrics (формат как в metrics.html)
+function loadMetricsStats() {
+  var st = {}; try { st = JSON.parse(localStorage.getItem('po_metrics') || '{}'); } catch (e) {}
+  var learned = 0, mastered = 0;
+  Object.keys(st).forEach(function (k) {
+    var e = st[k] || {};
+    if (e.learned) learned++;
+    if ((e.reps || 0) >= 2) mastered++;
+  });
+  return { learned: learned, mastered: mastered, total: METRICS_TOTAL };
 }
 
 // ===== persist: однажды добытый металл не тускнеет =====
@@ -182,7 +208,8 @@ function render() {
   var prog = {}; try { prog = JSON.parse(localStorage.getItem('po_progress') || '{}'); } catch (e) {}
   var diag = null; try { diag = JSON.parse(localStorage.getItem('po_diagnostic_day0') || 'null'); } catch (e) {}
 
-  var current = computeCrests(prog, diag);
+  var mStats = loadMetricsStats();
+  var current = computeCrests(prog, diag, mStats);
 
   // не тускнеет: отображаемый металл = max(текущий, ранее добытый)
   var ach = loadAch();
@@ -204,7 +231,8 @@ function render() {
   document.getElementById('summary').innerHTML =
     '<div class="chip"><b>' + unlocked + '</b> / 7 гербов открыто</div>' +
     '<div class="chip"><b>' + golds + '</b> золотых</div>' +
-    '<div class="chip"><b>' + allDays + '</b> / 30 дней пройдено</div>';
+    '<div class="chip"><b>' + allDays + '</b> / 30 дней пройдено</div>' +
+    '<div class="chip"><b>' + mStats.mastered + '</b> / ' + mStats.total + ' метрик освоено</div>';
 
   var grid = document.getElementById('crests');
   grid.innerHTML = display.map(function (c, idx) {
@@ -222,11 +250,13 @@ function render() {
   var allSilver = display.every(function (c) { return c.shownTier >= 2; });
   var allGold = display.every(function (c) { return c.shownTier === 3; });
   var discipline = allDays === 30;
+  var metricsExpert = mStats.total > 0 && (mStats.mastered / mStats.total) >= 0.8;
   var BADGES = [
-    { on: anyBronze,  ic: '🥉', nm: 'Первый герб',      bd: 'Открыт хотя бы один герб области' },
-    { on: allSilver,  ic: '🏅', nm: 'Магистр продукта', bd: 'Все 7 областей — серебро и выше' },
-    { on: allGold,    ic: '👑', nm: 'Великий магистр',  bd: 'Все 7 гербов — золото' },
-    { on: discipline, ic: '🔥', nm: 'Дисциплина',        bd: 'Пройдены все 30 дней курса' }
+    { on: anyBronze,     ic: '🥉', nm: 'Первый герб',      bd: 'Открыт хотя бы один герб области' },
+    { on: allSilver,     ic: '🏅', nm: 'Магистр продукта', bd: 'Все 7 областей — серебро и выше' },
+    { on: allGold,       ic: '👑', nm: 'Великий магистр',  bd: 'Все 7 гербов — золото' },
+    { on: discipline,    ic: '🔥', nm: 'Дисциплина',        bd: 'Пройдены все 30 дней курса' },
+    { on: metricsExpert, ic: '📐', nm: 'Знаток метрик',    bd: 'Освоено ≥80% продуктовых метрик' }
   ];
   document.getElementById('badges').innerHTML = BADGES.map(function (b) {
     return '<div class="badge ' + (b.on ? 'on' : '') + '">' +
@@ -236,7 +266,7 @@ function render() {
     '</div>';
   }).join('');
 
-  ach.meta = { firstCrest: anyBronze, master: allSilver, grandmaster: allGold, discipline: discipline };
+  ach.meta = { firstCrest: anyBronze, master: allSilver, grandmaster: allGold, discipline: discipline, metricsExpert: metricsExpert };
   saveAch(ach);
 
   document.getElementById('fnote').textContent =

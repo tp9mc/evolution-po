@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Банк метрик · Evolution PO</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="cloud-sync.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f14">
+<link rel="stylesheet" href="mobile.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #0f0f14; color: #e8e8ea;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    padding: 18px 14px 60px; max-width: 760px; margin: 0 auto; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top a { color: #9ca3af; text-decoration: none; font-size: 14px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; }
+  .sub { color: #9ca3af; font-size: 13.5px; margin: 8px 0 18px; line-height: 1.55; }
+
+  .summary { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .chip { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 12px; padding: 8px 12px; font-size: 12.5px; color: #cbd5e1; }
+  .chip b { color: #fff; font-size: 14.5px; }
+
+  .filters { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .f-chip { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+    color: #cbd5e1; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; cursor: pointer;
+    user-select: none; transition: all .15s; }
+  .f-chip.on { background: #fff; color: #0f0f14; border-color: #fff; font-weight: 600; }
+  .f-chip.seg { font-weight: 700; }
+  .search { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+    color: #fff; padding: 11px 14px; border-radius: 12px; font-size: 14.5px; outline: none; }
+  .search::placeholder { color: #6b7280; }
+
+  .actions { display: flex; gap: 10px; margin: 14px 0 16px; }
+  .actions button { flex: 1; padding: 12px 14px; border-radius: 12px; border: 0; font-weight: 700;
+    font-size: 14px; cursor: pointer; transition: opacity .15s; }
+  .actions button:disabled { opacity: .35; cursor: not-allowed; }
+  .actions .primary { background: #fff; color: #0f0f14; }
+  .actions .secondary { background: rgba(255,255,255,0.07); color: #fff;
+    border: 1px solid rgba(255,255,255,0.12); }
+
+  .list { display: grid; gap: 10px; }
+  .card { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px; padding: 13px 14px; cursor: pointer; transition: border-color .15s; }
+  .card:active { transform: scale(.995); }
+  .card.learned { border-color: rgba(110,231,183,0.35); background: rgba(110,231,183,0.04); }
+  .card.due { border-color: rgba(255,216,107,0.45); }
+  .card-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .nm { font-size: 15px; font-weight: 700; color: #f3f4f6; }
+  .en { font-size: 12px; color: #6b7280; }
+  .formula { font-size: 12.5px; color: #9ca3af; margin-top: 5px; font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace; }
+  .what { font-size: 13px; color: #cbd5e1; margin-top: 7px; line-height: 1.45; }
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+  .tag { font-size: 10.5px; padding: 3px 8px; border-radius: 7px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; }
+  .seg-B2B { background: rgba(99,102,241,0.18); color: #a5b4fc; }
+  .seg-B2C { background: rgba(244,63,94,0.18); color: #fda4af; }
+  .seg-B2B2C { background: rgba(20,184,166,0.18); color: #5eead4; }
+  .seg-B2E { background: rgba(245,158,11,0.18); color: #fcd34d; }
+  .cat { background: rgba(255,255,255,0.06); color: #9ca3af; }
+  .learned-mark { color: #6ee7b7; font-size: 13px; font-weight: 700; margin-left: auto; }
+  .due-mark { color: #fcd34d; font-size: 12px; font-weight: 700; margin-left: auto; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(8px);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal.hidden { display: none; }
+  .sheet { background: #15151b; width: 100%; max-width: 720px; border-radius: 22px 22px 0 0;
+    padding: 22px 18px 26px; max-height: 92vh; overflow-y: auto;
+    border-top: 1px solid rgba(255,255,255,0.08); }
+  .sheet .close { background: rgba(255,255,255,0.06); color: #fff; border: 0; border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; float: right; cursor: pointer; }
+  .sheet h2 { font-size: 20px; margin-top: 4px; line-height: 1.25; }
+  .sheet .en2 { color: #6b7280; font-size: 13px; margin-top: 4px; }
+  .sheet .row { margin-top: 16px; }
+  .sheet .lbl { font-size: 11px; text-transform: uppercase; color: #6b7280;
+    letter-spacing: .08em; font-weight: 700; margin-bottom: 5px; }
+  .sheet .v { font-size: 14.5px; color: #e5e7eb; line-height: 1.55; }
+  .sheet .v.mono { font-family: ui-monospace, monospace; font-size: 13.5px; color: #cbd5e1; }
+  .sheet .v.trap { color: #fcd34d; }
+  .sheet .actions2 { display: flex; gap: 10px; margin-top: 20px; }
+  .sheet .actions2 button { flex: 1; padding: 12px; border-radius: 12px; border: 0;
+    font-weight: 700; font-size: 14px; cursor: pointer; }
+  .sheet .actions2 .lrn { background: #6ee7b7; color: #064e3b; }
+  .sheet .actions2 .lrn.on { background: rgba(255,255,255,0.08); color: #9ca3af; }
+  .sheet .actions2 .next { background: rgba(255,255,255,0.06); color: #fff;
+    border: 1px solid rgba(255,255,255,0.12); }
+
+  /* Quiz panel */
+  .quiz { background: #15151b; border-radius: 18px; padding: 20px 16px 24px;
+    margin: 8px 0; border: 1px solid rgba(255,255,255,0.08); display: none; }
+  .quiz.on { display: block; }
+  .quiz-top { display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: #9ca3af; margin-bottom: 12px; }
+  .quiz-q { font-size: 15.5px; font-weight: 600; line-height: 1.45; color: #f3f4f6;
+    margin-bottom: 16px; }
+  .quiz-opt { display: block; background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09); padding: 12px 14px; border-radius: 12px;
+    margin-bottom: 9px; cursor: pointer; transition: all .15s; font-size: 14px;
+    color: #e5e7eb; line-height: 1.4; }
+  .quiz-opt:hover { background: rgba(255,255,255,0.07); }
+  .quiz-opt.correct { background: rgba(16,185,129,0.13); border-color: rgba(16,185,129,0.55); }
+  .quiz-opt.wrong { background: rgba(244,63,94,0.13); border-color: rgba(244,63,94,0.55); }
+  .quiz-opt.right { background: rgba(110,231,183,0.13); border-color: rgba(110,231,183,0.6); }
+  .quiz-fb { margin-top: 12px; font-size: 13.5px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); color: #cbd5e1; line-height: 1.5; display: none; }
+  .quiz-fb.on { display: block; }
+  .quiz-fb.ok { background: rgba(16,185,129,0.10); color: #a7f3d0; }
+  .quiz-fb.bad { background: rgba(244,63,94,0.10); color: #fda4af; }
+  .quiz-next { width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 12px;
+    font-weight: 700; background: #fff; color: #0f0f14; cursor: pointer; font-size: 14.5px;
+    display: none; }
+  .quiz-next.on { display: block; }
+  .quiz-end { text-align: center; padding: 14px 0 6px; }
+  .quiz-end h3 { font-size: 22px; margin-bottom: 6px; }
+  .quiz-end .pct { font-size: 38px; font-weight: 800; margin: 8px 0 12px; }
+  .pct.ok { color: #6ee7b7; } .pct.mid { color: #fcd34d; } .pct.bad { color: #fda4af; }
+
+  .empty { text-align: center; color: #6b7280; padding: 40px 0; font-size: 14px; }
+  .help { color: #4b5563; font-size: 11.5px; line-height: 1.5; text-align: center;
+    margin-top: 28px; }
+
+  @media (min-width: 560px) { .list { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="top"><a href="index.html">‹ На главную</a></div>
+<h1>📊 Банк метрик</h1>
+<p class="sub">Все ключевые продуктовые метрики для <b>B2B</b>, <b>B2B2C</b>, <b>B2C</b>, <b>B2E</b>. Единый цикл обучения как в курсе и флэш-картах: прочти → отметь «Учить» → пройди дрилл-квиз → возвращайся к повтору, когда метрика «созреет». Мастерство усиливает герб <b>«Метрики»</b>.</p>
+
+<div class="summary" id="summary"></div>
+
+<div class="filters">
+  <div class="filter-row" id="segF"></div>
+  <div class="filter-row" id="catF"></div>
+  <input class="search" id="search" type="text" placeholder="🔎 Найти метрику..." />
+</div>
+
+<div class="actions">
+  <button class="primary" id="btnDrill">🎯 Дрилл (10 вопросов)</button>
+  <button class="secondary" id="btnReview">🔁 Повтор · <span id="dueCnt">0</span></button>
+</div>
+
+<div class="quiz" id="quiz">
+  <div class="quiz-top"><span id="qProgress">1 / 10</span><span id="qMode">Дрилл</span></div>
+  <div class="quiz-q" id="qText"></div>
+  <div id="qOpts"></div>
+  <div class="quiz-fb" id="qFb"></div>
+  <button class="quiz-next" id="qNext">Дальше →</button>
+</div>
+
+<div class="list" id="list"></div>
+<p class="empty" id="empty" style="display:none">Ничего не найдено по фильтрам.</p>
+
+<p class="help">Поясняющий принцип: сегментные теги показывают, где метрика максимально полезна (но многие применимы и шире). Формула приведена коротко — детали проверяй в книге/доке. Ловушки — частые ошибки PM с этой метрикой.</p>
+
+<div class="modal hidden" id="modal">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+// ============================================================
+// БАНК ПРОДУКТОВЫХ МЕТРИК  ·  Evolution PO
+// Единый учебный цикл: read -> learn -> drill (MCQ с объяснением) -> SR-повтор.
+// SR-механика SM-2-лайт (как в flashcards.html), но MCQ-исход (correct/wrong)
+// определяет рейтинг автоматически — чтобы быть едино с курсом/диагностикой.
+// ============================================================
+
+// ----- Данные -----
+// Каждая метрика: id, ru (русское), en (англ/аббр), f (формула, опц),
+// s (сегменты), c (категория), w (что показывает / когда), t (ловушка, опц)
+var CATS = {
+  acq:  { ru:'Привлечение',    em:'🎯' },
+  act:  { ru:'Активация',      em:'⚡' },
+  ret:  { ru:'Удержание',      em:'🧲' },
+  eng:  { ru:'Вовлечённость',  em:'🔥' },
+  rev:  { ru:'Монетизация',    em:'💰' },
+  sat:  { ru:'Удовлетворённость', em:'⭐' },
+  ue:   { ru:'Юнит-экономика', em:'📐' },
+  ops:  { ru:'Качество/SLA',   em:'🛠️' },
+  meta: { ru:'Принципы',       em:'🧭' }
+};
+var SEGS = ['B2B','B2B2C','B2C','B2E'];
+
+var METRICS = [
+  // === ПРИВЛЕЧЕНИЕ ===
+  { id:'cac', ru:'CAC', en:'Customer Acquisition Cost', f:'(маркетинг + продажи) / число новых клиентов', s:['B2B','B2C','B2B2C','B2E'], c:'acq',
+    w:'Сколько стоит привести одного клиента. Считай с учётом ВСЕХ затрат: команды, инструменты, контент, не только медиа.',
+    t:'Считать только paid media — занижает CAC. Не учитывать срок: CAC должен сравниваться с LTV того же сегмента/канала.' },
+  { id:'cac-payback', ru:'CAC Payback', en:'CAC Payback Period', f:'CAC / (ARPU × gross margin)', s:['B2B','B2C','B2B2C'], c:'acq',
+    w:'За сколько месяцев клиент окупает свой CAC. Здоровый B2B SaaS: <12 мес; топ <6 мес.',
+    t:'Считать на выручку, а не на маржу — даст слишком оптимистично. Игнорировать churn в окне окупаемости.' },
+  { id:'blended-cac', ru:'Blended CAC', en:'Blended CAC', f:'все траты на рост / все новые клиенты (вкл. органику)', s:['B2B','B2C','B2B2C'], c:'acq',
+    w:'CAC с учётом органических клиентов. Полезен как «честный» взгляд сверху.',
+    t:'Скрывает реальную стоимость paid-канала. Не подходит для оценки масштабирования.' },
+  { id:'paid-cac', ru:'Paid CAC', en:'Paid CAC', f:'paid spend / клиенты от paid-каналов', s:['B2B','B2C','B2B2C'], c:'acq',
+    w:'Чистый CAC платных каналов. Главный показатель для решений «вливать ещё».',
+    t:'Атрибуция в last-click — недооценит ассистные каналы.' },
+  { id:'mql', ru:'MQL', en:'Marketing Qualified Lead', s:['B2B'], c:'acq',
+    w:'Лид, подходящий по поведенческим и фирмографическим критериям маркетинга. Передаётся в SDR.',
+    t:'MQL без согласованного с продажами определения = «лидоген ради лидогена».' },
+  { id:'sql', ru:'SQL', en:'Sales Qualified Lead', s:['B2B'], c:'acq',
+    w:'Лид, принятый продажами после квалификации (BANT/MEDDIC). Реально пойдёт в pipeline.',
+    t:'Перепутать с MQL — испортит конверсии всей воронки.' },
+  { id:'pql', ru:'PQL', en:'Product Qualified Lead', s:['B2B','B2B2C'], c:'acq',
+    w:'Лид, который через продукт показал готовность платить (достиг activation, прошёл «жирный» сценарий). Основа product-led growth.',
+    t:'Брать всех бесплатных юзеров — заглушит сигнал. Нужен чёткий triggered-критерий.' },
+  { id:'lvr', ru:'Lead Velocity Rate', en:'LVR', f:'(MQL этого мес − прошлого) / прошлого × 100%', s:['B2B'], c:'acq',
+    w:'Темп роста квалифицированных лидов мес/мес. Опережающий индикатор будущего ARR.',
+    t:'Игнорировать качество лидов — рост LVR без роста SQL = провал.' },
+  { id:'k-factor', ru:'K-factor', en:'Viral Coefficient', f:'invitations × invite→signup conv.', s:['B2C','B2B2C'], c:'acq',
+    w:'Сколько новых юзеров приводит один в среднем. K≥1 — самоподдерживающийся рост.',
+    t:'Считать без учёта повторных приглашений и времени цикла — фантазии о росте.' },
+  { id:'referral-rate', ru:'Referral rate', en:'Referral rate', f:'приглашающих / активных', s:['B2C','B2B2C'], c:'acq',
+    w:'Какая доля юзеров действительно зовёт. Сигнал «настоящей» любви к продукту.',
+    t:'Путать с conversion реферальной программы — это другое.' },
+  { id:'conv-rate', ru:'Conversion rate', en:'Conversion rate', f:'дошли до шага / зашли на шаг', s:['B2B','B2C','B2B2C','B2E'], c:'acq',
+    w:'Доля прошедших шаг воронки. Считай по когортам и каналам.',
+    t:'Средняя по больнице маскирует слом конкретного канала или сегмента.' },
+  { id:'signup-rate', ru:'Sign-up rate', en:'Sign-up rate', s:['B2C','B2B2C'], c:'acq',
+    w:'Доля посетителей лендинга, оставивших регистрацию. Базовый top-of-funnel показатель.',
+    t:'Радоваться росту sign-up без роста activation — vanity.' },
+  { id:'trial-paid', ru:'Trial → Paid', en:'Trial-to-paid', f:'оплатили / запустили триал', s:['B2B','B2C'], c:'acq',
+    w:'Эффективность воронки free→paid. Норма B2B SaaS: 15–25% для opt-in trial.',
+    t:'Без сегментации по источнику триала — невозможно улучшать.' },
+  // === АКТИВАЦИЯ ===
+  { id:'activation', ru:'Activation rate', en:'Activation rate', f:'новые юзеры, достигшие aha-момента / все новые', s:['B2B','B2C','B2B2C','B2E'], c:'act',
+    w:'Какая доля новых дошла до момента, после которого retention резко растёт. Главный leverage онбординга.',
+    t:'Активацией называть простой signup. Нужен поведенческий критерий, связанный с retention.' },
+  { id:'ttfv', ru:'Time to first value', en:'TTFV', s:['B2B','B2C','B2B2C','B2E'], c:'act',
+    w:'Время от регистрации до первой реальной ценности. Чем быстрее — тем выше activation и retention.',
+    t:'Мерять время до фичи, а не до ценности юзера. Эти точки часто не совпадают.' },
+  { id:'nsm', ru:'North Star Metric', en:'NSM', s:['B2B','B2C','B2B2C','B2E'], c:'act',
+    w:'Одна метрика, которая лучше всего отражает доставляемую ценность. Айрбнб = nights booked, Slack = messages sent в активных командах.',
+    t:'NSM ≠ выручка. Если совпало с выручкой — скорее всего, размыли смысл.' },
+  { id:'aha', ru:'Aha-moment', en:'Aha moment', s:['B2B','B2C','B2B2C'], c:'act',
+    w:'Конкретное событие (с числами), после которого юзер «понял ценность» и остаётся. Facebook: 7 друзей за 10 дней.',
+    t:'Назначить aha сверху, без когортного анализа retention — ничего не двигает.' },
+  { id:'onb-completion', ru:'Onboarding completion', en:'Onboarding completion rate', s:['B2B','B2C','B2B2C','B2E'], c:'act',
+    w:'Доля прошедших весь онбординг. Прямо влияет на activation и week-1 retention.',
+    t:'Длинный онбординг с высокой completion может убивать activation — мерять связку.' },
+  { id:'tta', ru:'Time to activation', en:'Time to activation', s:['B2B','B2C','B2B2C'], c:'act',
+    w:'Время от signup до достижения activation-criteria. Чем меньше — тем больше дойдут.',
+    t:'Среднее искажает: смотри медиану и p90.' },
+  // === УДЕРЖАНИЕ ===
+  { id:'churn-logo', ru:'Logo churn', en:'Logo churn rate', f:'отвалившиеся клиенты / клиенты на старте периода', s:['B2B','B2B2C'], c:'ret',
+    w:'Доля «потерянных» клиентов (юр.лиц). Базовая метрика здоровья B2B.',
+    t:'Mixed-периоды без когорт — невозможно понять, лучше или хуже.' },
+  { id:'rev-churn', ru:'Revenue churn', en:'Gross revenue churn', f:'потерянная MRR / стартовая MRR', s:['B2B','B2C'], c:'ret',
+    w:'Сколько выручки утекло. Норма B2B SaaS: <1% в мес (топ <0,5%).',
+    t:'Брать вместе с expansion — получаешь NRR, не GRR. Это разные истории.' },
+  { id:'nrr', ru:'NRR (NDR)', en:'Net Revenue Retention', f:'(старт + expansion − churn − contraction) / старт', s:['B2B'], c:'ret',
+    w:'Сколько выручки осталось от той же базы + сколько добавили. >100% = база растёт сама. Топ B2B: 120%+.',
+    t:'Высокий NRR при разваливающейся acquisition = ложный комфорт.' },
+  { id:'grr', ru:'GRR', en:'Gross Revenue Retention', f:'(старт − churn − contraction) / старт', s:['B2B'], c:'ret',
+    w:'NRR без расширения — показывает «утечку» базы. Хороший B2B: >90%.',
+    t:'Смотреть только NRR, прячась за expansion от высокого GRR-провала.' },
+  { id:'renewal-rate', ru:'Renewal rate', en:'Renewal rate', f:'продлили контракт / закончили контракт', s:['B2B'], c:'ret',
+    w:'Главный B2B-показатель устойчивости. Считай по seats и по logos отдельно.',
+    t:'Усреднять годовые и месячные контракты — теряется сигнал.' },
+  { id:'retention-curve', ru:'Cohort retention', en:'Cohort retention (D1/D7/D30)', s:['B2B','B2C','B2B2C','B2E'], c:'ret',
+    w:'Доля когорты, активная через N дней. Стабилизация кривой — главный знак product-market fit.',
+    t:'Snapshot retention ≠ cohort. Snapshot скрывает деградацию старых когорт.' },
+  { id:'reactivation', ru:'Reactivation rate', en:'Reactivation rate', s:['B2C','B2B2C'], c:'ret',
+    w:'Какая доля ушедших возвращается. Дешевле, чем acquisition. Триггеры: новые фичи, оффер, контент.',
+    t:'Лить ретаргет без сегментации причины ухода — слив бюджета.' },
+  { id:'logo-retention', ru:'Logo retention', en:'Logo retention', f:'1 − logo churn', s:['B2B'], c:'ret',
+    w:'Доля сохранённых клиентов. Парный показатель к logo churn, удобнее в отчёте борду.',
+    t:'Те же ловушки, что у churn (см. logo-churn).' },
+  { id:'seat-expansion', ru:'Seat expansion', en:'Seat expansion rate', f:'добавленные места / стартовые места', s:['B2B'], c:'ret',
+    w:'Темп роста мест внутри аккаунта — главный драйвер NRR в B2B.',
+    t:'Не учесть downgrade мест — overstated expansion.' },
+  { id:'multi-product', ru:'Multi-product attach', en:'Multi-product attach rate', f:'клиенты с ≥2 SKU / все клиенты', s:['B2B'], c:'ret',
+    w:'Доля клиентов на 2+ продуктах. Сильно поднимает NRR и снижает churn.',
+    t:'Pushить второй продукт до настоящей ценности первого — поднимет attach, обвалит retention.' },
+  // === ВОВЛЕЧЁННОСТЬ ===
+  { id:'dau', ru:'DAU', en:'Daily Active Users', s:['B2C','B2E'], c:'eng',
+    w:'Число уникальных юзеров в день. Сравнивай по сопоставимым 7-дневным средним (DAU 7d MA).',
+    t:'Считать всех зашедших — нужна «meaningful action» в определении активности.' },
+  { id:'wau', ru:'WAU', en:'Weekly Active Users', s:['B2B','B2C','B2B2C','B2E'], c:'eng',
+    w:'Уникальные за 7 дней. Базовый показатель для B2B-инструментов.',
+    t:'Использовать вместо DAU/MAU там, где нужны другие частоты.' },
+  { id:'mau', ru:'MAU', en:'Monthly Active Users', s:['B2B','B2C','B2B2C','B2E'], c:'eng',
+    w:'Уникальные за 30 дней. Удобно для медленно-частотных продуктов.',
+    t:'Раздувание MAU нерелевантной активностью — vanity.' },
+  { id:'dau-mau', ru:'DAU/MAU stickiness', en:'DAU/MAU', f:'DAU / MAU', s:['B2C','B2E'], c:'eng',
+    w:'«Прилипчивость». >20% — нормально для соцпродуктов; >50% — топ (Whatsapp, Instagram).',
+    t:'Бесполезна для нечастотных B2B-продуктов — не применяй везде подряд.' },
+  { id:'sessions-user', ru:'Sessions per user', en:'Sessions per user', s:['B2C','B2E'], c:'eng',
+    w:'Среднее число сессий в период. Парная метрика к session length.',
+    t:'Падение sessions с ростом value-per-session — на самом деле улучшение, не регрессия.' },
+  { id:'session-length', ru:'Session length', en:'Session length', s:['B2C','B2E'], c:'eng',
+    w:'Среднее время сессии. Контекстно: для медиа — рост хорошо; для утилит — рост плохо.',
+    t:'Применять одинаково ко всем продуктам — даёт неверные выводы.' },
+  { id:'power-user', ru:'Power user curve', en:'L28 / Power user curve', s:['B2C','B2E'], c:'eng',
+    w:'Распределение «сколько дней из 28 юзер был активен». Толщина правого хвоста = глубина вовлечения.',
+    t:'Среднее L28 без распределения — теряешь информацию.' },
+  { id:'feat-adoption', ru:'Feature adoption', en:'Feature adoption rate', f:'юзеры, использовавшие фичу ≥1 раза / все активные', s:['B2B','B2C','B2B2C','B2E'], c:'eng',
+    w:'Какая доля доходит до фичи. Парная: feature retention (вернулись ли).',
+    t:'Учитывать первое использование без retention — фантазии о ценности.' },
+  { id:'feat-retention', ru:'Feature retention', en:'Feature retention', s:['B2B','B2C','B2B2C'], c:'eng',
+    w:'Возвращается ли юзер к фиче. Главный сигнал реальной ценности фичи.',
+    t:'Adopion есть, retention нет — фича-«фантик», скорее всего, не нужна.' },
+  { id:'push-optin', ru:'Push opt-in', en:'Push opt-in rate', s:['B2C'], c:'eng',
+    w:'Доля разрешивших push. Драйвит reactivation и engagement.',
+    t:'Спросить разрешение сразу на старте — сожжёшь opt-in. Спрашивать в момент ценности.' },
+  { id:'push-ctr', ru:'Push CTR', en:'Push CTR', s:['B2C'], c:'eng',
+    w:'Кликабельность push. Сегментируй по типу нотификации и сегменту юзера.',
+    t:'Увеличить CTR за счёт спама — обвалит opt-in и retention.' },
+  // === МОНЕТИЗАЦИЯ ===
+  { id:'mrr', ru:'MRR', en:'Monthly Recurring Revenue', f:'Σ месячно-нормированных подписок', s:['B2B','B2C'], c:'rev',
+    w:'Базовая SaaS-метрика повторяющейся выручки. Бьётся на new/expansion/contraction/churn.',
+    t:'Включать one-time выручку в MRR — обман себя и инвесторов.' },
+  { id:'arr', ru:'ARR', en:'Annual Recurring Revenue', f:'MRR × 12', s:['B2B'], c:'rev',
+    w:'Годовая нормированная выручка. Главная B2B-метрика для board/инвесторов.',
+    t:'Считать ARR по подписанным контрактам без учёта churn-вероятности.' },
+  { id:'arpu', ru:'ARPU', en:'Average Revenue Per User', f:'выручка / активные юзеры', s:['B2B','B2C','B2B2C','B2E'], c:'rev',
+    w:'Средняя выручка с юзера. Сравнивай по сегментам и тарифам — общее ARPU мало о чём говорит.',
+    t:'Не путать с ARPPU. Учитывать неоплачивающих — занижает.' },
+  { id:'arppu', ru:'ARPPU', en:'Avg Revenue Per Paying User', f:'выручка / число платящих', s:['B2C'], c:'rev',
+    w:'Средний чек среди тех, кто платит. Для F2P, freemium — главная.',
+    t:'Рост ARPPU при падающей conversion = риск опустошения базы.' },
+  { id:'ltv', ru:'LTV', en:'Customer Lifetime Value', f:'ARPU × gross margin / churn', s:['B2B','B2C','B2B2C'], c:'rev',
+    w:'Сколько денег принесёт клиент за всю жизнь. Сравнивай с CAC.',
+    t:'LTV на старте — оптимистичная экстраполяция. Делай чувствительность по churn.' },
+  { id:'ltv-cac', ru:'LTV / CAC', en:'LTV/CAC ratio', f:'LTV / CAC', s:['B2B','B2C','B2B2C'], c:'rev',
+    w:'Эффективность экономики. Здоровый SaaS: ≥3. <1 — горим, >5 — недоинвестируем в рост.',
+    t:'Считать LTV без gross margin → пузырь. Сравнивать по разным сегментам — некорректно.' },
+  { id:'acv', ru:'ACV', en:'Annual Contract Value', f:'TCV / срок контракта (годы)', s:['B2B'], c:'rev',
+    w:'Годовая стоимость контракта. Используется для сегментации pipeline (SMB/Mid/Enterprise).',
+    t:'Путать с ARR (ACV — про сделку, ARR — про подписку компании в целом).' },
+  { id:'tcv', ru:'TCV', en:'Total Contract Value', f:'сумма всех платежей по контракту', s:['B2B'], c:'rev',
+    w:'Полная стоимость контракта за весь срок. Полезна для long-term enterprise сделок.',
+    t:'Сравнивать TCV между сделками с разным сроком — обман.' },
+  { id:'asp', ru:'ASP', en:'Average Sales Price / Deal Size', s:['B2B'], c:'rev',
+    w:'Средняя сумма сделки. Растёт с движением в enterprise; падает в SMB-self-serve.',
+    t:'Средняя без медианы — выбросы Whales искажают.' },
+  { id:'expansion-mrr', ru:'Expansion MRR', en:'Expansion MRR', s:['B2B','B2C'], c:'rev',
+    w:'Допродажи (upsell, cross-sell, seat add) существующим. Топливо NRR>100%.',
+    t:'Гнать expansion до настоящей ценности — растёт churn через 1-2 квартала.' },
+  { id:'contraction-mrr', ru:'Contraction MRR', en:'Contraction MRR', s:['B2B'], c:'rev',
+    w:'Downgrades без полного ухода. Часто опережающий индикатор churn.',
+    t:'Игнорировать contraction — пропустишь предчурн.' },
+  { id:'gross-margin', ru:'Gross margin', en:'Gross margin', f:'(выручка − COGS) / выручка', s:['B2B','B2C','B2B2C'], c:'rev',
+    w:'Маржинальность. SaaS норма: 70–85%. Marketplace: ниже из-за take-rate.',
+    t:'Не относить к COGS реальный hosting и customer success — фантастическая маржа.' },
+  { id:'take-rate', ru:'Take rate', en:'Take rate', f:'комиссия маркетплейса / GMV', s:['B2B2C'], c:'rev',
+    w:'Доля от GMV, которая остаётся платформе. Marketplace: 10–25%; B2B2C SaaS: ниже.',
+    t:'Поднять take rate без roi для поставщика → отток партнёров.' },
+  { id:'gmv', ru:'GMV', en:'Gross Merchandise Value', s:['B2B2C','B2C'], c:'rev',
+    w:'Объём транзакций через платформу. Не выручка платформы — путать опасно.',
+    t:'Подавать GMV вместо revenue — классический инвест-обман (см. ранние WeWork/uber).' },
+  { id:'whale', ru:'Whale concentration', en:'Whale concentration', f:'выручка от топ-1% / общая', s:['B2C'], c:'rev',
+    w:'Концентрация выручки на «китах» (F2P, IAP). Высокая — риск устойчивости.',
+    t:'Зависимость от <0.5% юзеров = одна банальная история и провал квартала.' },
+  { id:'refund', ru:'Refund rate', en:'Refund rate', s:['B2C','B2B'], c:'rev',
+    w:'Доля возвратов. Растёт — проблема с ожиданиями (маркетинг или продукт).',
+    t:'Не делить по причинам — не понять, чинить ли продукт или коммуникацию.' },
+  { id:'win-rate', ru:'Win rate', en:'Win rate', f:'выигранные сделки / закрытые сделки', s:['B2B'], c:'rev',
+    w:'Сильный индикатор качества квалификации и предложения. Нормально 20–35%.',
+    t:'Win rate растёт за счёт отказа от сложных сделок — потолок ASP падает.' },
+  // === УДОВЛЕТВОРЁННОСТЬ ===
+  { id:'nps', ru:'NPS', en:'Net Promoter Score', f:'% промоутеров − % критиков (шкала 0–10)', s:['B2B','B2C','B2B2C','B2E'], c:'sat',
+    w:'Готовность рекомендовать. Сравнивай с бенчмарком отрасли, не с абсолютом.',
+    t:'NPS как KPI команды — Goodhart: начнут спрашивать только довольных.' },
+  { id:'csat', ru:'CSAT', en:'Customer Satisfaction', f:'% «удовлетворены» (4-5 на 5-балльной)', s:['B2B','B2C','B2B2C','B2E'], c:'sat',
+    w:'Точечная удовлетворённость событием (саппорт, фича). Быстрая обратная связь.',
+    t:'CSAT 90%+ без сегментации — скрывает катастрофы маленьких сегментов.' },
+  { id:'ces', ru:'CES', en:'Customer Effort Score', s:['B2B','B2C','B2E'], c:'sat',
+    w:'«Насколько легко было решить задачу». Сильнее коррелирует с retention, чем NPS, для утилит.',
+    t:'Применять там, где у юзера эмоциональная привязка важнее усилия (B2C entertainment).' },
+  { id:'enps', ru:'eNPS', en:'Employee NPS', s:['B2E'], c:'sat',
+    w:'NPS для сотрудников. Опережающий индикатор adoption внутренних продуктов.',
+    t:'eNPS низкий, но adoption принудительно высокий — toxic-внедрение, копится сопротивление.' },
+  { id:'app-rating', ru:'App store rating', en:'App store rating', s:['B2C'], c:'sat',
+    w:'Средняя оценка в сторах. Сильно влияет на органику и conversion в установку.',
+    t:'«Просить оценку» сразу после старта — отравляет средний рейтинг негативом.' },
+  { id:'ticket-rate', ru:'Support ticket rate', en:'Support tickets / 1000 active', s:['B2B','B2C','B2B2C','B2E'], c:'sat',
+    w:'Сколько обращений на 1000 активных. Высокий — проблема в UX/онбординге.',
+    t:'Снижение через сокрытие контактов саппорта — обвалит NPS.' },
+  { id:'partner-nps', ru:'Partner NPS', en:'Partner NPS', s:['B2B2C'], c:'sat',
+    w:'NPS партнёров платформы. Драйвер их активности и роста GMV.',
+    t:'Учитывать только крупных партнёров — теряется длинный хвост.' },
+  // === ЮНИТ-ЭКОНОМИКА / ФИН ===
+  { id:'rule40', ru:'Rule of 40', en:'Rule of 40', f:'рост выручки % + операц. маржа % ≥ 40', s:['B2B'], c:'ue',
+    w:'Баланс роста и прибыльности SaaS. Топ-публичные SaaS — стабильно >40.',
+    t:'Достигать через one-time gains — Rule of 40 устойчиво должен держаться 4+ квартала.' },
+  { id:'magic-number', ru:'Magic number', en:'Magic number', f:'(ARR кварт. − ARR пред.кв.) × 4 / S&M пред.кв.', s:['B2B'], c:'ue',
+    w:'Эффективность S&M-инвестиций. >1 — инвестируй больше; <0.5 — пересмотри GTM.',
+    t:'Magic number оптимизирован за счёт expansion existing — реальная new-logo экономика прячется.' },
+  { id:'burn-multiple', ru:'Burn multiple', en:'Burn multiple', f:'net cash burn / net new ARR', s:['B2B'], c:'ue',
+    w:'Сколько сжигаем на $1 новой ARR. <1 — отлично, >3 — горим. Альтернатива Magic number.',
+    t:'В стартапе early-stage burn multiple временно высокий — нормально 1-2 года.' },
+  { id:'quick-ratio', ru:'Quick ratio (SaaS)', en:'SaaS Quick Ratio', f:'(new + expansion MRR) / (churned + contraction MRR)', s:['B2B'], c:'ue',
+    w:'Чистый рост vs утечка. >4 — здоровый рост; <1 — проблема устойчивости.',
+    t:'Накачать new ради числителя при дырявом дне — стратегия ведром черпать.' },
+  { id:'contribution-margin', ru:'Contribution margin', en:'Contribution margin', f:'выручка − переменные затраты', s:['B2B','B2C','B2B2C'], c:'ue',
+    w:'Маржа на единицу после переменных. Полезнее gross margin для решений «масштабировать ли».',
+    t:'Не включать customer success в переменные — переоцениваешь CM.' },
+  { id:'cac-ratio', ru:'CAC ratio', en:'CAC ratio', f:'S&M затраты / new ARR', s:['B2B'], c:'ue',
+    w:'Сколько $ S&M на $ новой ARR. <1.5 — здоровый Enterprise; <1 — SMB self-serve.',
+    t:'Не учитывать onboarding costs — заниженный CAC ratio.' },
+  { id:'arr-per-fte', ru:'ARR per FTE', en:'ARR per FTE', f:'ARR / число сотрудников', s:['B2B'], c:'ue',
+    w:'Эффективность команды. Public SaaS медиана: $200–300K на FTE.',
+    t:'Сравнивать со «случайной» компанией без стадии — бессмысленно.' },
+  { id:'cogs-user', ru:'COGS per active user', en:'Cost per active user', s:['B2C','B2B2C','B2E'], c:'ue',
+    w:'Хостинг + сторонние API + поддержка на одного активного. Драйвер маржи в C-продуктах.',
+    t:'Не закладывать пиковые нагрузки — провалится при росте.' },
+  // === ОПЕРАЦИОННЫЕ / КАЧЕСТВО ===
+  { id:'p95', ru:'p95 latency', en:'p95 latency', s:['B2B','B2C','B2B2C','B2E'], c:'ops',
+    w:'95-й перцентиль времени ответа. Лучше среднего: ловит «длинный хвост» медленных запросов.',
+    t:'Смотреть только средний latency — пропускаешь боли 5% юзеров с худшим опытом.' },
+  { id:'error-rate', ru:'Error rate', en:'Error rate', f:'ошибочные ответы / все', s:['B2B','B2C','B2B2C','B2E'], c:'ops',
+    w:'Доля провальных запросов/действий. Парная с p95 — даёт картину надёжности.',
+    t:'Не отделять server-side от client-side — путает root cause.' },
+  { id:'uptime', ru:'Uptime / SLA', en:'Uptime / SLA %', s:['B2B','B2B2C'], c:'ops',
+    w:'Доля времени работы. SLA 99.9% = ~43 мин даунтайма в мес.',
+    t:'Реальный uptime включает деградацию (slow, не падает) — формальный SLA её не ловит.' },
+  { id:'crash-free', ru:'Crash-free users', en:'Crash-free users', s:['B2C'], c:'ops',
+    w:'Доля юзеров без крэшей в сессии. Топ-mobile: >99.5%.',
+    t:'Crash-free sessions ≠ crash-free users; первая обычно выше — выбирай метрику осознанно.' },
+  { id:'api-success', ru:'API success rate', en:'API success rate', s:['B2B','B2B2C'], c:'ops',
+    w:'Доля успешных API-вызовов. Главная метрика B2B-платформ.',
+    t:'Считать 4xx как «success», т.к. сервер не упал — обман интегратора.' },
+  { id:'ttr', ru:'Time-to-resolve', en:'TTR', s:['B2B','B2B2C','B2E'], c:'ops',
+    w:'Сколько в среднем чинится инцидент/тикет. Влияет на NPS и SLA.',
+    t:'Закрытие тикета без решения проблемы — обманчиво короткий TTR.' },
+  // === B2E-СПЕЦИФИКА ===
+  { id:'adoption-b2e', ru:'Internal adoption %', en:'Adoption rate (B2E)', f:'активные сотрудники / целевая аудитория', s:['B2E'], c:'eng',
+    w:'Какой % сотрудников реально пользуется. <60% после 3 мес — провал внедрения.',
+    t:'Принудительное внедрение даёт 100% adoption — eNPS и CES падают; через год — тихий саботаж.' },
+  { id:'time-saved', ru:'Time saved per user', en:'Time saved per user', s:['B2E'], c:'eng',
+    w:'Сколько часов экономит инструмент на сотрудника. Главный B2E-ROI.',
+    t:'Самоотчёт без замера — overstated на 30–50%.' },
+  { id:'process-completion', ru:'Process completion', en:'Process completion rate', s:['B2E'], c:'act',
+    w:'Доля рабочих процессов, завершённых от старта до результата. Сигнал реальной полезности.',
+    t:'Считать «начат» как «выполнен» — фикция результата.' },
+  // === МЕТА / ПРИНЦИПЫ ===
+  { id:'vanity', ru:'Vanity metric', en:'Vanity metric', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'Метрика, которая выглядит красиво, но не влияет на решения и поведение пользователя. Page views, downloads без активации — типичные.',
+    t:'«Растёт = хорошо» без вопроса «что мы решаем» — vanity-ловушка.' },
+  { id:'goodhart', ru:'Goodhart\'s Law', en:'Goodhart\'s Law', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'«Когда метрика становится целью, она перестаёт быть хорошей мерой». Команды оптимизируют число, теряя смысл.',
+    t:'KPI на NPS / activation без counter-metric — гарантированный Goodhart через квартал.' },
+  { id:'leading-lagging', ru:'Leading vs lagging', en:'Leading vs lagging indicators', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'Leading — опережающие (activation, PQL, NPS); Lagging — запаздывающие (выручка, churn). Управляешь leading, отчитываешься lagging.',
+    t:'Управлять только lagging-метриками — реакция на провал, а не предотвращение.' },
+  { id:'counter-metric', ru:'Counter metric', en:'Counter metric', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'Защитная метрика рядом с основной, чтобы не сломать её ради числа. Пример: engagement + churn, conversion + refund rate.',
+    t:'Главная метрика без counter — рано или поздно «оптимизируем» в проблему.' },
+  { id:'nsm-okr-kpi', ru:'NSM vs OKR vs KPI', en:'NSM vs OKR vs KPI', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'NSM — одна метрика ценности (что мы доставляем); OKR — амбициозная цель + KR на квартал; KPI — постоянные индикаторы здоровья.',
+    t:'Сделать KPI «амбициозным» = тот же KPI, но названный по-другому; OKR теряет смысл.' },
+  { id:'cohort-vs-snapshot', ru:'Cohort vs snapshot', en:'Cohort vs snapshot', s:['B2B','B2C','B2B2C','B2E'], c:'meta',
+    w:'Cohort: следишь за группой во времени. Snapshot: срез на дату. Cohort показывает истину; snapshot — текущее самочувствие.',
+    t:'Делать выводы об улучшении продукта по snapshot — пропустишь деградацию старых когорт.' },
+  { id:'health-score', ru:'Health score', en:'Composite health score', s:['B2B'], c:'meta',
+    w:'Взвешенный индекс из нескольких сигналов (usage, NPS, support load, payments). Драйвит CSM-приоритезацию.',
+    t:'Веса «на глаз» без калибровки от реального churn — модель красивая, бесполезная.' }
+];
+
+// ============================================================
+// Состояние / persist
+// ============================================================
+function loadM() { try { return JSON.parse(localStorage.getItem('po_metrics') || '{}'); } catch(e) { return {}; } }
+function saveM(s) {
+  var j = JSON.stringify(s);
+  try { localStorage.setItem('po_metrics', j); } catch(e) {}
+  if (window.POCloud) POCloud.mirror('po_metrics', j);
+}
+
+function initEntry() { return { learned:false, last:0, ease:2.5, interval:0, due:0, reps:0, lapses:0 }; }
+function rate(entry, correct) {
+  if (!entry) entry = initEntry();
+  if (!entry.learned) entry.learned = true;
+  var now = Date.now();
+  if (correct) {
+    entry.reps = (entry.reps || 0) + 1;
+    if (entry.reps === 1) entry.interval = 1;
+    else if (entry.reps === 2) entry.interval = 3;
+    else entry.interval = Math.round((entry.interval || 1) * (entry.ease || 2.5));
+    entry.ease = Math.min(2.7, (entry.ease || 2.5) + 0.05);
+  } else {
+    entry.lapses = (entry.lapses || 0) + 1;
+    entry.reps = 0;
+    entry.interval = 0;
+    entry.ease = Math.max(1.3, (entry.ease || 2.5) - 0.25);
+  }
+  entry.last = now;
+  entry.due = now + entry.interval * 86400000;
+  return entry;
+}
+
+// ============================================================
+// Чистая функция: счётчики для герба «Метрики»
+// Доступ изнутри achievements.html через window.__metricsStats
+// ============================================================
+function metricsStats(state) {
+  state = state || {};
+  var total = METRICS.length;
+  var learned = 0, mastered = 0; // mastered = reps>=2 (реально выучено, не разово)
+  Object.keys(state).forEach(function (k) {
+    var e = state[k] || {};
+    if (e.learned) learned++;
+    if ((e.reps || 0) >= 2) mastered++;
+  });
+  return { total: total, learned: learned, mastered: mastered };
+}
+window.__metricsStats = metricsStats;
+window.__METRICS = METRICS;
+
+// ============================================================
+// Фильтры
+// ============================================================
+var fSeg = 'all';   // 'all'|'B2B'|'B2B2C'|'B2C'|'B2E'
+var fCat = 'all';   // 'all' or cat id
+var fLearned = 'all'; // 'all'|'learned'|'unlearned'|'due'
+var search = '';
+
+function renderFilters() {
+  var seg = document.getElementById('segF'); seg.innerHTML = '';
+  var allSegs = ['all'].concat(SEGS);
+  allSegs.forEach(function (s) {
+    var b = document.createElement('button');
+    b.className = 'f-chip seg' + (fSeg === s ? ' on' : '');
+    b.textContent = s === 'all' ? 'Все сегменты' : s;
+    b.onclick = function () { fSeg = s; render(); };
+    seg.appendChild(b);
+  });
+  var cat = document.getElementById('catF'); cat.innerHTML = '';
+  var catChips = [{ id:'all', label:'Все категории' }].concat(
+    Object.keys(CATS).map(function (k) { return { id:k, label: CATS[k].em + ' ' + CATS[k].ru }; })
+  );
+  catChips.push({ id:'learned',   label:'✓ Уже учу' });
+  catChips.push({ id:'due',       label:'🔁 К повтору' });
+  catChips.push({ id:'unlearned', label:'◌ Ещё не учу' });
+  catChips.forEach(function (c) {
+    var b = document.createElement('button');
+    b.className = 'f-chip' + ((c.id === fCat || c.id === fLearned) ? ' on' : '');
+    b.textContent = c.label;
+    b.onclick = function () {
+      if (['learned','due','unlearned'].indexOf(c.id) !== -1) {
+        fLearned = (fLearned === c.id) ? 'all' : c.id;
+      } else {
+        fCat = c.id;
+      }
+      render();
+    };
+    cat.appendChild(b);
+  });
+}
+
+function filtered() {
+  var state = loadM();
+  var now = Date.now();
+  return METRICS.filter(function (m) {
+    if (fSeg !== 'all' && m.s.indexOf(fSeg) === -1) return false;
+    if (fCat !== 'all' && m.c !== fCat) return false;
+    var e = state[m.id];
+    if (fLearned === 'learned' && !(e && e.learned)) return false;
+    if (fLearned === 'unlearned' && (e && e.learned)) return false;
+    if (fLearned === 'due') {
+      if (!(e && e.learned)) return false;
+      if (!(e.due <= now)) return false;
+    }
+    if (search) {
+      var q = search.toLowerCase();
+      var hay = (m.ru + ' ' + m.en + ' ' + (m.w || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
+// ============================================================
+// Рендер
+// ============================================================
+function escapeHTML(s) {
+  return String(s || '').replace(/[&<>"']/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+function render() {
+  renderFilters();
+  var state = loadM();
+  var stats = metricsStats(state);
+  var due = 0; var now = Date.now();
+  Object.keys(state).forEach(function (k) {
+    var e = state[k]; if (e && e.learned && e.due <= now) due++;
+  });
+  document.getElementById('dueCnt').textContent = due;
+  document.getElementById('btnReview').disabled = due === 0;
+
+  document.getElementById('summary').innerHTML =
+    '<div class="chip"><b>' + stats.learned + '</b> / ' + stats.total + ' учу</div>' +
+    '<div class="chip"><b>' + stats.mastered + '</b> освоено (reps≥2)</div>' +
+    '<div class="chip"><b>' + due + '</b> к повтору</div>';
+
+  var list = document.getElementById('list');
+  var items = filtered();
+  document.getElementById('empty').style.display = items.length ? 'none' : 'block';
+  list.innerHTML = items.map(function (m) {
+    var e = state[m.id] || {};
+    var classes = 'card' + (e.learned ? ' learned' : '') + (e.learned && e.due <= now ? ' due' : '');
+    var mark = e.learned
+      ? (e.due <= now ? '<span class="due-mark">🔁 повтор</span>' : '<span class="learned-mark">✓ учу</span>')
+      : '';
+    return '<div class="' + classes + '" data-id="' + m.id + '">' +
+      '<div class="card-top"><span class="nm">' + escapeHTML(m.ru) + '</span>' +
+        '<span class="en">' + escapeHTML(m.en) + '</span>' + mark + '</div>' +
+      (m.f ? '<div class="formula">= ' + escapeHTML(m.f) + '</div>' : '') +
+      '<div class="what">' + escapeHTML(m.w) + '</div>' +
+      '<div class="tags">' +
+        m.s.map(function (sg) { return '<span class="tag seg-' + sg + '">' + sg + '</span>'; }).join('') +
+        '<span class="tag cat">' + CATS[m.c].em + ' ' + CATS[m.c].ru + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  list.querySelectorAll('.card').forEach(function (el) {
+    el.onclick = function () { openModal(el.dataset.id); };
+  });
+}
+
+// ============================================================
+// Модал с деталями + кнопка «Учить / Снять»
+// ============================================================
+function openModal(id) {
+  var m = METRICS.find(function (x) { return x.id === id; });
+  if (!m) return;
+  var state = loadM();
+  var e = state[m.id] || initEntry();
+  var sheet = document.getElementById('sheet');
+  sheet.innerHTML =
+    '<button class="close" onclick="closeModal()">Закрыть</button>' +
+    '<h2>' + escapeHTML(m.ru) + '</h2>' +
+    '<div class="en2">' + escapeHTML(m.en) + '</div>' +
+    '<div class="row"><div class="lbl">Что показывает / когда</div><div class="v">' + escapeHTML(m.w) + '</div></div>' +
+    (m.f ? '<div class="row"><div class="lbl">Формула</div><div class="v mono">' + escapeHTML(m.f) + '</div></div>' : '') +
+    '<div class="row"><div class="lbl">Сегменты</div><div class="v">' +
+      m.s.map(function (sg) { return '<span class="tag seg-' + sg + '" style="margin-right:6px">' + sg + '</span>'; }).join('') +
+      '<span class="tag cat">' + CATS[m.c].em + ' ' + CATS[m.c].ru + '</span></div></div>' +
+    (m.t ? '<div class="row"><div class="lbl">Главная ловушка</div><div class="v trap">⚠ ' + escapeHTML(m.t) + '</div></div>' : '') +
+    (e.learned
+      ? '<div class="row"><div class="lbl">SR-статус</div><div class="v">Повторений: ' + (e.reps || 0) +
+          ' · ease ' + (e.ease || 2.5).toFixed(2) +
+          ' · следующий повтор: ' + (e.due ? new Date(e.due).toLocaleDateString('ru-RU') : '—') + '</div></div>'
+      : '') +
+    '<div class="actions2">' +
+      '<button class="lrn ' + (e.learned ? 'on' : '') + '" id="lrnBtn">' +
+        (e.learned ? '✓ Учу — снять' : '+ Учить эту метрику') + '</button>' +
+      '<button class="next" onclick="closeModal()">Готово</button>' +
+    '</div>';
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('lrnBtn').onclick = function () { toggleLearn(m.id); };
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+function toggleLearn(id) {
+  var state = loadM();
+  var e = state[id] || initEntry();
+  if (e.learned) {
+    delete state[id];
+  } else {
+    e.learned = true;
+    e.last = Date.now();
+    e.due = Date.now() + 86400000; // через сутки можно проверить
+    e.interval = 1; e.reps = 0; e.ease = 2.5;
+    state[id] = e;
+  }
+  saveM(state);
+  closeModal(); render();
+}
+
+// ============================================================
+// Дрилл-квиз
+//  4 типа вопросов:
+//    A — по описанию выбрать имя
+//    B — по имени выбрать описание
+//    C — выбрать сегмент(ы)
+//    D — выбрать ловушку
+// Дистракторы — из той же категории (в крайнем случае — из всех).
+// ============================================================
+var quiz = null;
+function shuffle(a) { a = a.slice(); for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function sample(arr, n, exclude) {
+  return shuffle(arr.filter(function (x) { return exclude.indexOf(x) === -1; })).slice(0, n);
+}
+
+function makeQuestion(m) {
+  var sameCat = METRICS.filter(function (x) { return x.c === m.c && x.id !== m.id; });
+  var pool = sameCat.length >= 3 ? sameCat : METRICS.filter(function (x) { return x.id !== m.id; });
+  var types = ['A', 'B', 'C'];
+  if (m.t) types.push('D');
+  var type = types[Math.floor(Math.random() * types.length)];
+
+  if (type === 'A') {
+    var distractors = sample(pool, 3, []).map(function (x) { return x.ru + ' (' + x.en + ')'; });
+    return {
+      q: 'Какая метрика соответствует описанию: «' + m.w + '»',
+      correct: m.ru + ' (' + m.en + ')',
+      opts: shuffle([m.ru + ' (' + m.en + ')'].concat(distractors)),
+      fb: m.f ? 'Формула: ' + m.f : 'Запомни связку «название ↔ суть».'
+    };
+  }
+  if (type === 'B') {
+    var distractors2 = sample(pool, 3, []).map(function (x) { return x.w; });
+    return {
+      q: 'Что показывает «' + m.ru + '» (' + m.en + ')?',
+      correct: m.w,
+      opts: shuffle([m.w].concat(distractors2)),
+      fb: m.f ? 'Формула: ' + m.f : 'Метрика категории «' + CATS[m.c].ru + '».'
+    };
+  }
+  if (type === 'C') {
+    // Сегменты комбинируем; правильный = строка-набор сегментов; дистракторы — комбинации других метрик
+    var correctSeg = m.s.slice().sort().join(' / ');
+    var allCombos = METRICS.map(function (x) { return x.s.slice().sort().join(' / '); });
+    var distSet = {};
+    for (var i = 0; i < allCombos.length && Object.keys(distSet).length < 6; i++) {
+      if (allCombos[i] !== correctSeg) distSet[allCombos[i]] = 1;
+    }
+    var distractors3 = shuffle(Object.keys(distSet)).slice(0, 3);
+    return {
+      q: 'Для каких сегментов «' + m.ru + '» применима в первую очередь?',
+      correct: correctSeg,
+      opts: shuffle([correctSeg].concat(distractors3)),
+      fb: 'Сегменты: ' + correctSeg + '. Категория: ' + CATS[m.c].ru + '.'
+    };
+  }
+  // D
+  var trapsPool = METRICS.filter(function (x) { return x.t && x.id !== m.id; });
+  var distractors4 = sample(trapsPool, 3, []).map(function (x) { return x.t; });
+  return {
+    q: 'Главная ловушка метрики «' + m.ru + '»?',
+    correct: m.t,
+    opts: shuffle([m.t].concat(distractors4)),
+    fb: m.f ? 'Формула: ' + m.f : ''
+  };
+}
+
+function pickDeck(mode) {
+  var state = loadM();
+  var now = Date.now();
+  if (mode === 'review') {
+    var due = METRICS.filter(function (m) {
+      var e = state[m.id]; return e && e.learned && e.due <= now;
+    });
+    return shuffle(due).slice(0, Math.max(due.length, 1));
+  }
+  // drill: prefer learned-due, then learned-soon, then unlearned random; 10 шт
+  var learnedDue = [], learnedOther = [], notYet = [];
+  METRICS.forEach(function (m) {
+    var e = state[m.id];
+    if (e && e.learned && e.due <= now) learnedDue.push(m);
+    else if (e && e.learned) learnedOther.push(m);
+    else notYet.push(m);
+  });
+  var deck = shuffle(learnedDue)
+    .concat(shuffle(learnedOther))
+    .concat(shuffle(notYet))
+    .slice(0, 10);
+  return deck;
+}
+
+function startQuiz(mode) {
+  var deck = pickDeck(mode);
+  if (!deck.length) return;
+  quiz = { mode: mode, deck: deck, i: 0, correct: 0, current: null };
+  document.getElementById('quiz').classList.add('on');
+  document.getElementById('qMode').textContent = (mode === 'review' ? 'Повтор' : 'Дрилл');
+  nextQuestion();
+  document.getElementById('quiz').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function nextQuestion() {
+  var q = quiz;
+  if (q.i >= q.deck.length) { endQuiz(); return; }
+  var m = q.deck[q.i];
+  q.current = makeQuestion(m);
+  q.currentMetric = m;
+  document.getElementById('qProgress').textContent = (q.i + 1) + ' / ' + q.deck.length;
+  document.getElementById('qText').textContent = q.current.q;
+  var opts = document.getElementById('qOpts');
+  opts.innerHTML = q.current.opts.map(function (o) {
+    return '<div class="quiz-opt">' + escapeHTML(o) + '</div>';
+  }).join('');
+  opts.querySelectorAll('.quiz-opt').forEach(function (el) {
+    el.onclick = function () { pick(el, el.textContent); };
+  });
+  document.getElementById('qFb').className = 'quiz-fb';
+  document.getElementById('qFb').textContent = '';
+  document.getElementById('qNext').className = 'quiz-next';
+  document.getElementById('qNext').textContent = (q.i + 1 === q.deck.length ? 'Завершить' : 'Дальше →');
+}
+
+function pick(el, val) {
+  if (el.dataset.locked) return;
+  // блокируем все варианты
+  document.querySelectorAll('#qOpts .quiz-opt').forEach(function (o) {
+    o.dataset.locked = '1'; o.style.cursor = 'default';
+    if (o.textContent === quiz.current.correct) o.classList.add('right');
+  });
+  var correct = (val === quiz.current.correct);
+  el.classList.add(correct ? 'correct' : 'wrong');
+  var fb = document.getElementById('qFb');
+  fb.classList.add('on');
+  fb.classList.add(correct ? 'ok' : 'bad');
+  fb.innerHTML = (correct ? '✓ Верно. ' : '✗ Не то. ') + (quiz.current.fb || '');
+  document.getElementById('qNext').classList.add('on');
+  document.getElementById('qNext').onclick = function () { advance(correct); };
+  if (correct) quiz.correct++;
+  // обновить SR метрики СРАЗУ
+  var state = loadM();
+  state[quiz.currentMetric.id] = rate(state[quiz.currentMetric.id] || initEntry(), correct);
+  saveM(state);
+}
+
+function advance(_) {
+  quiz.i++;
+  if (quiz.i >= quiz.deck.length) endQuiz();
+  else nextQuestion();
+}
+
+function endQuiz() {
+  var pct = Math.round(quiz.correct / quiz.deck.length * 100);
+  var cl = pct >= 80 ? 'ok' : pct >= 50 ? 'mid' : 'bad';
+  document.getElementById('qOpts').innerHTML = '';
+  document.getElementById('qText').innerHTML =
+    '<div class="quiz-end"><h3>Результат</h3>' +
+    '<div class="pct ' + cl + '">' + pct + '%</div>' +
+    '<div style="color:#9ca3af;font-size:13.5px">' + quiz.correct + ' / ' + quiz.deck.length +
+    ' правильно. SR-интервалы обновлены.</div></div>';
+  document.getElementById('qFb').className = 'quiz-fb';
+  document.getElementById('qFb').textContent = '';
+  document.getElementById('qNext').className = 'quiz-next on';
+  document.getElementById('qNext').textContent = 'Закрыть';
+  document.getElementById('qNext').onclick = function () {
+    document.getElementById('quiz').classList.remove('on');
+    quiz = null;
+    render();
+  };
+}
+
+// ============================================================
+// Инициализация
+// ============================================================
+document.getElementById('btnDrill').onclick = function () { startQuiz('drill'); };
+document.getElementById('btnReview').onclick = function () { startQuiz('review'); };
+document.getElementById('search').oninput = function (e) { search = e.target.value; render(); };
+
+render();
+</script>
+<script src="tma-init.js"></script>
+</body>
+</html>

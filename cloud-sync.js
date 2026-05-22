@@ -20,7 +20,7 @@
 // приложения (чтобы гидратация успела до первых loadProg()).
 // ===================================================================
 (function () {
-  var KEYS = ['po_progress', 'po_diagnostic_day0', 'po_flashcards', 'po_achievements'];
+  var KEYS = ['po_progress', 'po_diagnostic_day0', 'po_flashcards', 'po_achievements', 'po_metrics'];
   var CS_LIMIT = 4096; // лимит значения Telegram CloudStorage
   var tg = window.Telegram && window.Telegram.WebApp;
   var cs = tg && tg.CloudStorage;
