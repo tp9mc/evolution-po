@@ -5,6 +5,7 @@
 <title>Банк метрик · Evolution PO</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="cloud-sync.js"></script>
+<script src="lessons.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -121,6 +122,54 @@
   .quiz-end h3 { font-size: 22px; margin-bottom: 6px; }
   .quiz-end .pct { font-size: 38px; font-weight: 800; margin: 8px 0 12px; }
   .pct.ok { color: #6ee7b7; } .pct.mid { color: #fcd34d; } .pct.bad { color: #fda4af; }
+
+  /* Lesson player */
+  .lsn-step { font-size: 12.5px; color: #6b7280; text-transform: uppercase;
+    letter-spacing: .06em; font-weight: 700; }
+  .lsn-title { font-size: 19px; font-weight: 800; margin: 6px 0 14px; line-height: 1.3; }
+  .lsn-body { background: rgba(255,255,255,0.03); border-radius: 12px;
+    padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #e5e7eb; }
+  .lsn-body.code { font-family: ui-monospace, monospace; color: #cbd5e1; font-size: 13px; }
+  .lsn-row { margin-top: 14px; }
+  .lsn-lbl { font-size: 11px; text-transform: uppercase; color: #6b7280;
+    letter-spacing: .08em; font-weight: 700; margin-bottom: 6px; }
+  .lsn-num { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+    color: #fff; padding: 12px 14px; border-radius: 10px; font-size: 16px;
+    font-family: ui-monospace, monospace; width: 100%; outline: none; }
+  .lsn-text { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+    color: #fff; padding: 11px 14px; border-radius: 10px; font-size: 14px;
+    width: 100%; outline: none; }
+  .lsn-num:focus, .lsn-text:focus { border-color: rgba(255,255,255,0.32); }
+  .lsn-check { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: 12px;
+    font-weight: 700; background: #fff; color: #0f0f14; cursor: pointer; font-size: 14.5px; }
+  .lsn-check:disabled { opacity:.4; cursor:not-allowed; }
+  .lsn-fb { margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); font-size: 13.5px; line-height: 1.5; display: none; }
+  .lsn-fb.on { display: block; }
+  .lsn-fb.ok { background: rgba(16,185,129,0.10); color: #a7f3d0; }
+  .lsn-fb.bad { background: rgba(244,63,94,0.10); color: #fda4af; }
+  .lsn-fb.info { background: rgba(245,158,11,0.10); color: #fcd34d; }
+  .lsn-next { width: 100%; margin-top: 12px; padding: 12px; border: 0; border-radius: 12px;
+    font-weight: 700; background: #fff; color: #0f0f14; cursor: pointer; font-size: 14.5px;
+    display: none; }
+  .lsn-next.on { display: block; }
+  .lsn-opt { display: block; background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09); padding: 11px 14px; border-radius: 10px;
+    margin-bottom: 8px; cursor: pointer; font-size: 13.5px; line-height: 1.45; color: #e5e7eb; }
+  .lsn-opt.correct { background: rgba(16,185,129,0.13); border-color: rgba(16,185,129,0.55); }
+  .lsn-opt.wrong { background: rgba(244,63,94,0.13); border-color: rgba(244,63,94,0.55); }
+  .lsn-opt.right { background: rgba(110,231,183,0.13); border-color: rgba(110,231,183,0.6); }
+  .lsn-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+  .lsn-bar .seg { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); }
+  .lsn-bar .seg.done { background: #6ee7b7; }
+  .lsn-bar .seg.cur { background: #fff; }
+  .lsn-bar .seg.wrong { background: rgba(244,63,94,0.7); }
+  .depth { display: inline-block; font-size: 10.5px; padding: 3px 7px; border-radius: 6px;
+    margin-left: 6px; font-weight: 700; }
+  .depth.deep { background: rgba(147,197,253,0.18); color: #93c5fd; }
+  .depth.basic { background: rgba(255,255,255,0.06); color: #9ca3af; }
+  .study-btn { background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    color: #fff !important; }
 
   .empty { text-align: center; color: #6b7280; padding: 40px 0; font-size: 14px; }
   .help { color: #4b5563; font-size: 11.5px; line-height: 1.5; text-align: center;
@@ -612,6 +661,9 @@ function render() {
     var mark = e.learned
       ? (e.due <= now ? '<span class="due-mark">🔁 повтор</span>' : '<span class="learned-mark">✓ учу</span>')
       : '';
+    var hasDeep = !!(window.LESSONS && window.LESSONS[m.id]);
+    var depth = hasDeep ? '<span class="depth deep">💎 ГЛУБОКИЙ</span>'
+                        : '<span class="depth basic">📖 БАЗОВЫЙ</span>';
     return '<div class="' + classes + '" data-id="' + m.id + '">' +
       '<div class="card-top"><span class="nm">' + escapeHTML(m.ru) + '</span>' +
         '<span class="en">' + escapeHTML(m.en) + '</span>' + mark + '</div>' +
@@ -620,6 +672,7 @@ function render() {
       '<div class="tags">' +
         m.s.map(function (sg) { return '<span class="tag seg-' + sg + '">' + sg + '</span>'; }).join('') +
         '<span class="tag cat">' + CATS[m.c].em + ' ' + CATS[m.c].ru + '</span>' +
+        depth +
       '</div>' +
     '</div>';
   }).join('');
@@ -653,12 +706,16 @@ function openModal(id) {
           ' · следующий повтор: ' + (e.due ? new Date(e.due).toLocaleDateString('ru-RU') : '—') + '</div></div>'
       : '') +
     '<div class="actions2">' +
+      '<button class="study-btn" id="studyBtn">📚 Начать разбор</button>' +
+    '</div>' +
+    '<div class="actions2">' +
       '<button class="lrn ' + (e.learned ? 'on' : '') + '" id="lrnBtn">' +
         (e.learned ? '✓ Учу — снять' : '+ Учить эту метрику') + '</button>' +
       '<button class="next" onclick="closeModal()">Готово</button>' +
     '</div>';
   document.getElementById('modal').classList.remove('hidden');
   document.getElementById('lrnBtn').onclick = function () { toggleLearn(m.id); };
+  document.getElementById('studyBtn').onclick = function () { startLesson(m.id); };
 }
 function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 function toggleLearn(id) {
@@ -845,6 +902,307 @@ function endQuiz() {
     quiz = null;
     render();
   };
+}
+
+// ============================================================
+// Плеер урока: глубокий или базовый (фоллбэк) разбор
+// Шаги: intro / scenario / calc / diagnose / trap / recall / counter / case
+// Финиш: если ≥70% интерактивных шагов верны — rate(true) в SR
+// ============================================================
+var LSN = null;
+
+function normTxt(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[ё]/g, 'е')
+    .replace(/[^a-zа-я0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function checkRecall(input, accept) {
+  var u = normTxt(input);
+  if (!u) return false;
+  return accept.some(function (a) {
+    var n = normTxt(a);
+    if (!n) return false;
+    if (u.indexOf(n) !== -1) return true;
+    var toks = n.split(' ').filter(function (t) { return t.length > 2; });
+    if (!toks.length) return false;
+    var hits = toks.filter(function (t) { return u.indexOf(t) !== -1; }).length;
+    return hits / toks.length >= 0.65;
+  });
+}
+
+function buildFallbackLesson(m) {
+  // Базовый разбор для метрик без глубокого: intro + recall name + trap (если есть)
+  var steps = [];
+  var intro =
+    m.w +
+    (m.f ? '\n\nФормула: ' + m.f : '') +
+    '\n\nСегменты: ' + m.s.join(' / ') + ' · ' + CATS[m.c].ru;
+  steps.push(['🎯 Что это и где применяется', 'intro', intro]);
+
+  // diagnose-Б: по описанию вспомни название (MCQ из соседних имён)
+  var sameCat = METRICS.filter(function (x) { return x.c === m.c && x.id !== m.id; });
+  var pool = sameCat.length >= 3 ? sameCat : METRICS.filter(function (x) { return x.id !== m.id; });
+  var distractorNames = shuffle(pool).slice(0, 3).map(function (x) { return x.ru + ' (' + x.en + ')'; });
+  steps.push(['🩺 Узнай метрику', 'diagnose', {
+    setup: 'Какая метрика описана: «' + m.w + '»',
+    options: shuffle([{ t: m.ru + ' (' + m.en + ')', correct: true, why: 'Точно она.' }]
+      .concat(distractorNames.map(function (t) { return { t: t, correct: false, why: 'Не она.' }; })))
+  }]);
+
+  if (m.t) {
+    var trapsPool = METRICS.filter(function (x) { return x.t && x.id !== m.id; });
+    var distrTraps = shuffle(trapsPool).slice(0, 3).map(function (x) { return x.t; });
+    steps.push(['⚠ Главная ловушка', 'trap', {
+      setup: 'Какая из этих ошибок — главная ловушка метрики «' + m.ru + '»?',
+      options: shuffle([{ t: m.t, correct: true, why: 'Это и есть ключевая ошибка.' }]
+        .concat(distrTraps.map(function (t) { return { t: t, correct: false, why: 'Это ловушка другой метрики.' }; })))
+    }]);
+  }
+
+  if (m.f) {
+    steps.push(['🧠 Вспомни формулу', 'recall', {
+      prompt: 'Запиши формулу «' + m.ru + '» своими словами (ключевые слова достаточно):',
+      accept: [m.f, m.en],
+      canonical: m.f
+    }]);
+  }
+  return steps;
+}
+
+function getLessonSteps(id) {
+  if (window.LESSONS && window.LESSONS[id]) return window.LESSONS[id];
+  var m = METRICS.find(function (x) { return x.id === id; });
+  return m ? buildFallbackLesson(m) : [];
+}
+
+function startLesson(id) {
+  var m = METRICS.find(function (x) { return x.id === id; });
+  var steps = getLessonSteps(id);
+  if (!m || !steps.length) return;
+  LSN = { id: id, m: m, steps: steps, i: 0, results: [], deep: !!(window.LESSONS && window.LESSONS[id]) };
+  document.getElementById('modal').classList.remove('hidden');
+  renderLessonStep();
+}
+
+function lessonProgressBar() {
+  return '<div class="lsn-bar">' + LSN.steps.map(function (_, i) {
+    var cls = 'seg';
+    if (i < LSN.i) cls += LSN.results[i] === false ? ' wrong' : ' done';
+    else if (i === LSN.i) cls += ' cur';
+    return '<div class="' + cls + '"></div>';
+  }).join('') + '</div>';
+}
+
+function renderLessonStep() {
+  var sheet = document.getElementById('sheet');
+  var step = LSN.steps[LSN.i];
+  var title = step[0], type = step[1], data = step[2];
+
+  var head =
+    '<button class="close" onclick="closeLesson()">Закрыть</button>' +
+    '<div class="lsn-step">Разбор: ' + escapeHTML(LSN.m.ru) +
+      ' · шаг ' + (LSN.i + 1) + ' / ' + LSN.steps.length +
+      (LSN.deep ? ' · 💎 глубокий' : ' · 📖 базовый') + '</div>' +
+    '<div class="lsn-title">' + escapeHTML(title) + '</div>' +
+    lessonProgressBar();
+
+  var body = '';
+  if (type === 'intro' || type === 'case') {
+    body = '<div class="lsn-body">' + escapeHTML(data).replace(/\n/g, '<br>') + '</div>' +
+      '<button class="lsn-next on" id="lsnNext">Дальше →</button>';
+  } else if (type === 'scenario') {
+    body =
+      '<div class="lsn-body">' + escapeHTML(data.setup) + '</div>' +
+      '<div class="lsn-row"><div class="lsn-lbl">Формула</div>' +
+        '<div class="lsn-body code">' + escapeHTML(data.formula) + ' = ' +
+        escapeHTML(String(data.answer)) + ' ' + escapeHTML(data.unit || '') + '</div></div>' +
+      '<div class="lsn-fb on info">💡 ' + escapeHTML(data.insight) + '</div>' +
+      '<button class="lsn-next on" id="lsnNext">Понял, дальше →</button>';
+  } else if (type === 'calc') {
+    body =
+      '<div class="lsn-body">' + escapeHTML(data.prompt) + '</div>' +
+      '<div class="lsn-row"><div class="lsn-lbl">Твой ответ' + (data.unit ? ' (' + escapeHTML(data.unit) + ')' : '') + '</div>' +
+        '<input class="lsn-num" id="lsnNum" type="text" inputmode="decimal" placeholder="число" />' +
+      '</div>' +
+      '<button class="lsn-check" id="lsnCheck">Проверить</button>' +
+      '<div class="lsn-fb" id="lsnFb"></div>' +
+      '<button class="lsn-next" id="lsnNext">Дальше →</button>';
+  } else if (type === 'diagnose' || type === 'trap') {
+    body =
+      '<div class="lsn-body">' + escapeHTML(data.setup) + '</div>' +
+      '<div class="lsn-row" id="lsnOpts">' +
+        data.options.map(function (o, j) {
+          return '<div class="lsn-opt" data-i="' + j + '">' + escapeHTML(o.t) + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="lsn-fb" id="lsnFb"></div>' +
+      '<button class="lsn-next" id="lsnNext">Дальше →</button>';
+  } else if (type === 'recall') {
+    body =
+      '<div class="lsn-body">' + escapeHTML(data.prompt) + '</div>' +
+      '<div class="lsn-row"><input class="lsn-text" id="lsnTxt" type="text" placeholder="ключевые слова" autocomplete="off" /></div>' +
+      '<button class="lsn-check" id="lsnCheck">Проверить</button>' +
+      '<div class="lsn-fb" id="lsnFb"></div>' +
+      '<button class="lsn-next" id="lsnNext">Дальше →</button>';
+  } else if (type === 'counter') {
+    var optMetrics = data.options.map(function (oid) {
+      var mm = METRICS.find(function (x) { return x.id === oid; });
+      return { id: oid, label: mm ? (mm.ru + ' (' + mm.en + ')') : oid };
+    });
+    body =
+      '<div class="lsn-body">' + escapeHTML(data.prompt) + '</div>' +
+      '<div class="lsn-row" id="lsnOpts">' +
+        optMetrics.map(function (o, j) {
+          return '<div class="lsn-opt" data-i="' + j + '" data-id="' + o.id + '">' + escapeHTML(o.label) + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="lsn-fb" id="lsnFb"></div>' +
+      '<button class="lsn-next" id="lsnNext">Дальше →</button>';
+  }
+
+  sheet.innerHTML = head + body;
+  bindStep(type, data);
+}
+
+function bindStep(type, data) {
+  var fb = document.getElementById('lsnFb');
+  var nxt = document.getElementById('lsnNext');
+  var go = function (ok, msg, neutral) {
+    if (fb) {
+      fb.className = 'lsn-fb on ' + (neutral ? 'info' : (ok ? 'ok' : 'bad'));
+      fb.innerHTML = msg;
+    }
+    if (nxt) nxt.classList.add('on');
+    LSN.results.push(ok === undefined ? null : !!ok); // null = pass-through (intro/case/scenario)
+  };
+
+  if (type === 'intro' || type === 'case') {
+    LSN.results.push(null);
+    if (nxt) nxt.onclick = advanceLesson;
+    return;
+  }
+  if (type === 'scenario') {
+    LSN.results.push(null);
+    if (nxt) nxt.onclick = advanceLesson;
+    return;
+  }
+  if (type === 'calc') {
+    document.getElementById('lsnCheck').onclick = function () {
+      var v = document.getElementById('lsnNum').value;
+      var n = parseFloat(String(v).replace(',', '.'));
+      var ok = !isNaN(n) && Math.abs(n - data.answer) <= (data.tol || 0);
+      go(ok,
+        (ok ? '✓ Верно. ' : '✗ Не совпало (ответ: ' + data.answer + (data.unit ? ' ' + data.unit : '') + '). ') +
+        escapeHTML(data.explain || ''));
+    };
+    nxt.onclick = advanceLesson;
+    return;
+  }
+  if (type === 'diagnose' || type === 'trap') {
+    var opts = document.querySelectorAll('#lsnOpts .lsn-opt');
+    opts.forEach(function (el) {
+      el.onclick = function () {
+        if (el.dataset.locked) return;
+        opts.forEach(function (o) {
+          o.dataset.locked = '1'; o.style.cursor = 'default';
+          var idx = parseInt(o.dataset.i, 10);
+          if (data.options[idx].correct) o.classList.add('right');
+        });
+        var idx = parseInt(el.dataset.i, 10);
+        var picked = data.options[idx];
+        el.classList.add(picked.correct ? 'correct' : 'wrong');
+        go(picked.correct, (picked.correct ? '✓ ' : '✗ ') + escapeHTML(picked.why || ''));
+      };
+    });
+    nxt.onclick = advanceLesson;
+    return;
+  }
+  if (type === 'recall') {
+    document.getElementById('lsnCheck').onclick = function () {
+      var v = document.getElementById('lsnTxt').value;
+      var ok = checkRecall(v, data.accept || []);
+      go(ok,
+        (ok ? '✓ Засчитано. ' : '✗ Не совпало. ') +
+        'Эталон: <i>' + escapeHTML(data.canonical || (data.accept && data.accept[0]) || '') + '</i>');
+    };
+    nxt.onclick = advanceLesson;
+    return;
+  }
+  if (type === 'counter') {
+    var opts2 = document.querySelectorAll('#lsnOpts .lsn-opt');
+    opts2.forEach(function (el) {
+      el.onclick = function () {
+        if (el.dataset.locked) return;
+        opts2.forEach(function (o) {
+          o.dataset.locked = '1'; o.style.cursor = 'default';
+          if (o.dataset.id === data.correct) o.classList.add('right');
+        });
+        var picked = el.dataset.id;
+        var ok = picked === data.correct;
+        el.classList.add(ok ? 'correct' : 'wrong');
+        var corrM = METRICS.find(function (x) { return x.id === data.correct; });
+        go(ok, (ok ? '✓ Верно. ' : '✗ Не та пара. ') +
+          'Правильная пара: <b>' + escapeHTML(corrM ? corrM.ru : data.correct) + '</b>');
+      };
+    });
+    nxt.onclick = advanceLesson;
+    return;
+  }
+}
+
+function advanceLesson() {
+  // Если последняя запись была null (intro/case/scenario без проверки),
+  // оставляем как null; если шаг был интерактивный, результат уже добавлен в go().
+  LSN.i++;
+  if (LSN.i >= LSN.steps.length) { finishLesson(); return; }
+  renderLessonStep();
+}
+
+function finishLesson() {
+  var interactive = LSN.results.filter(function (r) { return r !== null; });
+  var correct = interactive.filter(function (r) { return r === true; }).length;
+  var total = interactive.length;
+  var pct = total ? Math.round(correct / total * 100) : 100;
+  var passed = pct >= 70;
+
+  // SR-обновление: если passed — записываем correct в rate(); если нет — wrong (мягко)
+  var state = loadM();
+  var entry = state[LSN.id] || initEntry();
+  entry.learned = true;
+  state[LSN.id] = rate(entry, passed);
+  state[LSN.id].lesson = {
+    deep: LSN.deep, correct: correct, total: total, pct: pct,
+    passedAt: passed ? Date.now() : (entry.lesson && entry.lesson.passedAt) || 0
+  };
+  saveM(state);
+
+  var sheet = document.getElementById('sheet');
+  var cls = pct >= 80 ? 'ok' : pct >= 50 ? 'mid' : 'bad';
+  sheet.innerHTML =
+    '<button class="close" onclick="closeLesson()">Закрыть</button>' +
+    '<div class="lsn-step">Разбор завершён: ' + escapeHTML(LSN.m.ru) + '</div>' +
+    '<div class="lsn-title">' + (passed ? '🎉 Зачёт' : '🔁 Нужно повторить') + '</div>' +
+    '<div class="quiz-end"><div class="pct ' + cls + '">' + pct + '%</div>' +
+    '<div style="color:#9ca3af;font-size:13.5px">' + correct + ' / ' + total +
+    ' интерактивных шагов верно. ' +
+    (passed
+      ? 'Метрика отмечена как изучаемая, SR-интервал увеличен.'
+      : 'Повтори разбор или попробуй дрилл-квиз позже — интервалы скорректированы.') +
+    '</div></div>' +
+    '<div class="actions2">' +
+      '<button class="study-btn" onclick="startLesson(\'' + LSN.id + '\')">🔁 Пройти ещё раз</button>' +
+      '<button class="next" onclick="closeLesson()">Готово</button>' +
+    '</div>';
+  LSN = null;
+}
+
+function closeLesson() {
+  document.getElementById('modal').classList.add('hidden');
+  LSN = null;
+  render();
 }
 
 // ============================================================
