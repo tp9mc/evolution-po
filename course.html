@@ -5,6 +5,7 @@
 <title>Evolution PO · 30-дневный курс</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="cloud-sync.js"></script>
+<script src="course-lessons.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -133,10 +134,71 @@
                                          border-bottom: 1px solid #f0f0eb; vertical-align: top; }
   .compare-table th { background: #f5f5f0; font-weight: 700; }
   .compare-table td:first-child { font-weight: 600; width: 30%; }
+
+  /* ===== Lesson player (углублённый разбор дня) ===== */
+  .lsn-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(8px); display: flex; align-items: flex-end;
+    justify-content: center; z-index: 200; }
+  .lsn-modal.hidden { display: none; }
+  .lsn-sheet { background: #15151b; color: #e8e8ea; width: 100%; max-width: 720px;
+    border-radius: 22px 22px 0 0; padding: 22px 18px 28px; max-height: 92vh;
+    overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.08); }
+  .lsn-sheet .lsn-close { background: rgba(255,255,255,0.06); color: #fff; border: 0;
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; float: right; cursor: pointer; }
+  .lsn-step { font-size: 12.5px; color: #6b7280; text-transform: uppercase;
+    letter-spacing: .06em; font-weight: 700; }
+  .lsn-title { font-size: 19px; font-weight: 800; margin: 6px 0 14px; line-height: 1.3; color: #f3f4f6; }
+  .lsn-body { background: rgba(255,255,255,0.03); border-radius: 12px;
+    padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #e5e7eb; }
+  .lsn-body.code { font-family: ui-monospace, monospace; color: #cbd5e1; font-size: 13px; }
+  .lsn-row { margin-top: 14px; }
+  .lsn-lbl { font-size: 11px; text-transform: uppercase; color: #6b7280;
+    letter-spacing: .08em; font-weight: 700; margin-bottom: 6px; }
+  .lsn-num, .lsn-text { background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 11px 14px;
+    border-radius: 10px; font-size: 14px; width: 100%; outline: none;
+    font-family: inherit; }
+  .lsn-num { font-family: ui-monospace, monospace; font-size: 16px; }
+  .lsn-num:focus, .lsn-text:focus { border-color: rgba(255,255,255,0.32); }
+  .lsn-check { width: 100%; margin-top: 12px; padding: 12px; border: 0;
+    border-radius: 12px; font-weight: 700; background: #fff; color: #0f0f14;
+    cursor: pointer; font-size: 14.5px; }
+  .lsn-fb { margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); font-size: 13.5px; line-height: 1.5;
+    display: none; color: #cbd5e1; }
+  .lsn-fb.on { display: block; }
+  .lsn-fb.ok { background: rgba(16,185,129,0.10); color: #a7f3d0; }
+  .lsn-fb.bad { background: rgba(244,63,94,0.10); color: #fda4af; }
+  .lsn-fb.info { background: rgba(245,158,11,0.10); color: #fcd34d; }
+  .lsn-next { width: 100%; margin-top: 12px; padding: 12px; border: 0;
+    border-radius: 12px; font-weight: 700; background: #fff; color: #0f0f14;
+    cursor: pointer; font-size: 14.5px; display: none; }
+  .lsn-next.on { display: block; }
+  .lsn-opt { display: block; background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09); padding: 11px 14px;
+    border-radius: 10px; margin-bottom: 8px; cursor: pointer; font-size: 13.5px;
+    line-height: 1.45; color: #e5e7eb; }
+  .lsn-opt.correct { background: rgba(16,185,129,0.13); border-color: rgba(16,185,129,0.55); }
+  .lsn-opt.wrong { background: rgba(244,63,94,0.13); border-color: rgba(244,63,94,0.55); }
+  .lsn-opt.right { background: rgba(110,231,183,0.13); border-color: rgba(110,231,183,0.6); }
+  .lsn-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+  .lsn-bar .seg { flex: 1; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.08); }
+  .lsn-bar .seg.done { background: #6ee7b7; } .lsn-bar .seg.cur { background: #fff; }
+  .lsn-bar .seg.wrong { background: rgba(244,63,94,0.7); }
+  .lsn-end { text-align: center; padding: 14px 0 6px; }
+  .lsn-end .pct { font-size: 38px; font-weight: 800; margin: 8px 0 12px; }
+  .pct.ok { color: #6ee7b7; } .pct.mid { color: #fcd34d; } .pct.bad { color: #fda4af; }
+  .deep-btn { display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; padding: 12px 20px; border-radius: 12px; text-decoration: none;
+    font-weight: 700; font-size: 14px; border: 0; cursor: pointer; margin-right: 10px; }
+  .map-day .deep-mark { position: absolute; bottom: 3px; right: 4px;
+    font-size: 9px; color: #8b5cf6; font-weight: 700; }
 </style>
 </head>
 <body>
 <div class="wrap" id="root"></div>
+<div class="lsn-modal hidden" id="lsnModal"><div class="lsn-sheet" id="lsnSheet"></div></div>
 
 <script>
 // ===================================================================
@@ -1534,7 +1596,9 @@ function renderHome(){
       if (isCurrent) cls.push('current');
       if (isReview) cls.push('review');
       const topic = lesson ? lesson.t : '—';
-      html += `<a class="${cls.join(' ')}" href="#day-${dn}"><div class="badge"></div><div class="n">${dn}</div><div class="topic">${topic}</div></a>`;
+      const dayProg = prog['day' + dn];
+      const deepDone = dayProg && dayProg.deep && dayProg.deep.passedAt;
+      html += `<a class="${cls.join(' ')}" href="#day-${dn}"><div class="badge"></div><div class="n">${dn}</div><div class="topic">${topic}</div>${deepDone ? '<div class="deep-mark">🎓</div>' : ''}</a>`;
     }
     html += `</div></div>`;
   }
@@ -1617,9 +1681,10 @@ function renderLesson(day){
           <div class="stat"><div class="v">${lesson.d}/30</div><div class="l">Дней</div></div>
           <div class="stat"><div class="v">🔥<span id="stat-streak">—</span></div><div class="l">Страйк</div></div>
         </div>
-        <div class="nav-buttons">
+        <div class="nav-buttons" style="flex-wrap:wrap">
+          ${(window.COURSE_EXTRAS && window.COURSE_EXTRAS[lesson.d]) ? `<button class="deep-btn" onclick="openCourseLesson(${lesson.d})">🎓 Углублённый разбор</button>` : ''}
           <a href="#home" class="btn btn-secondary" style="color:#1a1a1a">← карта</a>
-          <a href="#day-${lesson.d+1}" class="btn" style="background:white;color:#0f0f14">День ${lesson.d+1} →</a>
+          ${lesson.d < 30 ? `<a href="#day-${lesson.d+1}" class="btn" style="background:white;color:#0f0f14">День ${lesson.d+1} →</a>` : ''}
         </div>
       </div>
       <button id="finish-btn" disabled onclick="finishLesson(${lesson.d})">Ответь на кейс</button>
@@ -1702,6 +1767,185 @@ function finishLesson(day){
   $('finish-btn').style.display = 'none';
   document.querySelectorAll('.phase-tab').forEach(el=>el.classList.add('done'));
   window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+
+// ===================================================================
+// Углублённый разбор дня · единый плеер уроков (как в metrics.html)
+// Шаги: intro / scenario / calc / diagnose / trap / recall / case
+// На финише: po_progress[dayN].deep = {pct, passedAt} + рейтинг через
+// существующий saveProg (mirror в облако автоматически).
+// ===================================================================
+let CLSN = null;
+
+function _lEsc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function _normTxt(s){ return String(s||'').toLowerCase().replace(/[ё]/g,'е').replace(/[^a-zа-я0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function _checkRecall(input, accept, freeform){
+  const u = _normTxt(input); if (!u) return false;
+  if (freeform) return true; // принимаем любой непустой ответ
+  return accept.some(a => {
+    const n = _normTxt(a); if (!n) return false;
+    if (u.indexOf(n) !== -1) return true;
+    const toks = n.split(' ').filter(t => t.length > 2);
+    if (!toks.length) return false;
+    const hits = toks.filter(t => u.indexOf(t) !== -1).length;
+    return hits / toks.length >= 0.65;
+  });
+}
+
+function openCourseLesson(d){
+  const steps = (window.COURSE_EXTRAS && window.COURSE_EXTRAS[d]) || [];
+  if (!steps.length) return;
+  CLSN = { d:d, steps:steps, i:0, results:[] };
+  $('lsnModal').classList.remove('hidden');
+  _renderCStep();
+}
+function _closeCLesson(){ $('lsnModal').classList.add('hidden'); CLSN = null; }
+function _cBar(){
+  return '<div class="lsn-bar">' + CLSN.steps.map((_,i)=>{
+    let cls='seg'; if (i<CLSN.i) cls += (CLSN.results[i]===false?' wrong':' done'); else if (i===CLSN.i) cls+=' cur';
+    return '<div class="'+cls+'"></div>';
+  }).join('') + '</div>';
+}
+
+function _renderCStep(){
+  const sheet = $('lsnSheet');
+  const step = CLSN.steps[CLSN.i];
+  const title=step[0], type=step[1], data=step[2];
+  const dayLesson = COURSE.find(x => x.d === CLSN.d);
+  const head =
+    '<button class="lsn-close" onclick="_closeCLesson()">Закрыть</button>' +
+    '<div class="lsn-step">Углублённый разбор · день ' + CLSN.d +
+      (dayLesson ? ' · ' + _lEsc(dayLesson.t) : '') +
+      ' · шаг ' + (CLSN.i+1) + ' / ' + CLSN.steps.length + '</div>' +
+    '<div class="lsn-title">' + _lEsc(title) + '</div>' + _cBar();
+
+  let body = '';
+  if (type==='intro' || type==='case') {
+    body = '<div class="lsn-body">' + _lEsc(data).replace(/\n/g,'<br>') + '</div>' +
+      '<button class="lsn-next on" id="cNext">Дальше →</button>';
+  } else if (type==='scenario') {
+    body =
+      '<div class="lsn-body">' + _lEsc(data.setup) + '</div>' +
+      '<div class="lsn-row"><div class="lsn-lbl">Расчёт</div>' +
+        '<div class="lsn-body code">' + _lEsc(data.formula) + ' = ' + _lEsc(String(data.answer)) + ' ' + _lEsc(data.unit||'') + '</div></div>' +
+      '<div class="lsn-fb on info">💡 ' + _lEsc(data.insight) + '</div>' +
+      '<button class="lsn-next on" id="cNext">Понял, дальше →</button>';
+  } else if (type==='calc') {
+    body =
+      '<div class="lsn-body">' + _lEsc(data.prompt) + '</div>' +
+      '<div class="lsn-row"><div class="lsn-lbl">Твой ответ' + (data.unit?' ('+_lEsc(data.unit)+')':'') + '</div>' +
+        '<input class="lsn-num" id="cNum" type="text" inputmode="decimal" placeholder="число" /></div>' +
+      '<button class="lsn-check" id="cCheck">Проверить</button>' +
+      '<div class="lsn-fb" id="cFb"></div>' +
+      '<button class="lsn-next" id="cNext">Дальше →</button>';
+  } else if (type==='diagnose' || type==='trap') {
+    body =
+      '<div class="lsn-body">' + _lEsc(data.setup) + '</div>' +
+      '<div class="lsn-row" id="cOpts">' +
+        data.options.map((o,j)=>'<div class="lsn-opt" data-i="'+j+'">'+_lEsc(o.t)+'</div>').join('') +
+      '</div><div class="lsn-fb" id="cFb"></div>' +
+      '<button class="lsn-next" id="cNext">Дальше →</button>';
+  } else if (type==='recall') {
+    body =
+      '<div class="lsn-body">' + _lEsc(data.prompt) + '</div>' +
+      '<div class="lsn-row"><input class="lsn-text" id="cTxt" type="text" placeholder="ключевые слова" autocomplete="off" /></div>' +
+      '<button class="lsn-check" id="cCheck">Проверить</button>' +
+      '<div class="lsn-fb" id="cFb"></div>' +
+      '<button class="lsn-next" id="cNext">Дальше →</button>';
+  }
+
+  sheet.innerHTML = head + body;
+  _bindCStep(type, data);
+}
+
+function _bindCStep(type, data){
+  const fb = $('cFb'), nxt = $('cNext');
+  const go = (ok, msg) => {
+    if (fb){ fb.className = 'lsn-fb on ' + (ok ? 'ok' : 'bad'); fb.innerHTML = msg; }
+    if (nxt) nxt.classList.add('on');
+    CLSN.results.push(!!ok);
+  };
+  if (type==='intro' || type==='case' || type==='scenario'){
+    CLSN.results.push(null); // pass-through
+    if (nxt) nxt.onclick = _advanceCLesson;
+    return;
+  }
+  if (type==='calc'){
+    $('cCheck').onclick = () => {
+      const v = $('cNum').value;
+      const n = parseFloat(String(v).replace(',','.'));
+      const ok = !isNaN(n) && Math.abs(n - data.answer) <= (data.tol || 0);
+      go(ok, (ok ? '✓ Верно. ' : '✗ Не совпало (ответ: ' + data.answer + (data.unit ? ' ' + data.unit : '') + '). ') + _lEsc(data.explain || ''));
+    };
+    if (nxt) nxt.onclick = _advanceCLesson;
+    return;
+  }
+  if (type==='diagnose' || type==='trap'){
+    const opts = document.querySelectorAll('#cOpts .lsn-opt');
+    opts.forEach(el => {
+      el.onclick = () => {
+        if (el.dataset.locked) return;
+        opts.forEach(o => {
+          o.dataset.locked='1'; o.style.cursor='default';
+          const idx = parseInt(o.dataset.i,10);
+          if (data.options[idx].correct) o.classList.add('right');
+        });
+        const idx = parseInt(el.dataset.i,10);
+        const picked = data.options[idx];
+        el.classList.add(picked.correct ? 'correct' : 'wrong');
+        go(picked.correct, (picked.correct ? '✓ ' : '✗ ') + _lEsc(picked.why || ''));
+      };
+    });
+    if (nxt) nxt.onclick = _advanceCLesson;
+    return;
+  }
+  if (type==='recall'){
+    $('cCheck').onclick = () => {
+      const v = $('cTxt').value;
+      const ok = _checkRecall(v, data.accept || [], !!data.freeform);
+      const canon = data.canonical || (data.accept && data.accept[0]) || '';
+      go(ok, (ok ? '✓ Засчитано. ' : '✗ Не совпало. ') + (canon ? 'Эталон: <i>' + _lEsc(canon) + '</i>' : ''));
+    };
+    if (nxt) nxt.onclick = _advanceCLesson;
+    return;
+  }
+}
+
+function _advanceCLesson(){
+  CLSN.i++;
+  if (CLSN.i >= CLSN.steps.length) _finishCLesson();
+  else _renderCStep();
+}
+
+function _finishCLesson(){
+  const interactive = CLSN.results.filter(r => r !== null);
+  const correct = interactive.filter(r => r === true).length;
+  const total = interactive.length;
+  const pct = total ? Math.round(correct / total * 100) : 100;
+  const passed = pct >= 70;
+
+  // Persist в po_progress[dayN].deep
+  const prog = loadProg();
+  const key = 'day' + CLSN.d;
+  prog[key] = prog[key] || { date: new Date().toISOString() };
+  prog[key].deep = { pct: pct, correct: correct, total: total,
+    passedAt: passed ? Date.now() : (prog[key].deep && prog[key].deep.passedAt) || 0 };
+  saveProg(prog);
+
+  const cls = pct >= 80 ? 'ok' : pct >= 50 ? 'mid' : 'bad';
+  $('lsnSheet').innerHTML =
+    '<button class="lsn-close" onclick="_closeCLesson()">Закрыть</button>' +
+    '<div class="lsn-step">Углублённый разбор завершён · день ' + CLSN.d + '</div>' +
+    '<div class="lsn-title">' + (passed ? '🎉 Зачёт' : '🔁 Нужно повторить') + '</div>' +
+    '<div class="lsn-end"><div class="pct ' + cls + '">' + pct + '%</div>' +
+    '<div style="color:#9ca3af;font-size:13.5px">' + correct + ' / ' + total + ' интерактивных шагов верно. ' +
+    (passed ? 'День отмечен как глубоко проработанный 🎓' : 'Открой разбор снова позже — интервалы скорректированы.') +
+    '</div></div>' +
+    '<div style="display:flex;gap:10px;margin-top:18px">' +
+      '<button class="deep-btn" style="flex:1" onclick="openCourseLesson(' + CLSN.d + ')">🔁 Пройти ещё раз</button>' +
+      '<button class="lsn-next on" style="flex:1" onclick="_closeCLesson(); if (window.location.hash) router(); else renderHome();">Готово</button>' +
+    '</div>';
+  CLSN = null;
 }
 
 function router(){
